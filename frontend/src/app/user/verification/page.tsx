@@ -1,79 +1,112 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Progress } from "@/components/ui/progress"
-import { Upload, FileText, CheckCircle, Clock, AlertTriangle, Download } from "lucide-react"
-
-const documents = [
-  { 
-    id: 1, 
-    name: "DTI Registration", 
-    description: "Department of Trade and Industry Business Registration",
-    status: "verified", 
-    submittedAt: "2024-01-15",
-    fileName: "DTI_Registration_ABC_Corp.pdf",
-    fileSize: "2.4 MB"
-  },
-  { 
-    id: 2, 
-    name: "Business Permit", 
-    description: "Mayor's Business Permit",
-    status: "verified", 
-    submittedAt: "2024-01-15",
-    fileName: "Business_Permit_2024.pdf",
-    fileSize: "1.8 MB"
-  },
-  { 
-    id: 3, 
-    name: "Mayor's Permit", 
-    description: "Mayor's Permit to Operate",
-    status: "verified", 
-    submittedAt: "2024-01-15",
-    fileName: "Mayors_Permit_ABC_Corp.pdf",
-    fileSize: "1.2 MB"
-  },
-]
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Upload, FileText, CheckCircle, Clock, AlertTriangle, Loader2 } from "lucide-react"
 
 export default function VerificationPage() {
-  // Mock verification status - can be "Pending", "Verified", or "Rejected"
-  let verificationStatus: "Pending" | "Verified" | "Rejected" = "Verified"
-  let rejectionReason = ""
+  const [user, setUser] = useState<any>(null)
+  const [documents, setDocuments] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [uploadingDoc, setUploadingDoc] = useState<string | null>(null)
 
-  const [uploadingDoc, setUploadingDoc] = useState<number | null>(null)
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"
 
-  const handleFileUpload = (docId: number, file: File | null) => {
-    if (file) {
-      setUploadingDoc(docId)
-      // Simulate upload
-      setTimeout(() => {
-        setUploadingDoc(null)
-      }, 2000)
+  const requiredDocs = [
+    { name: "DTI Registration", description: "Department of Trade and Industry registration certificate" },
+    { name: "Business Permit", description: "Mayor's Business Permit" },
+    { name: "Company Profile", description: "Company background and portfolio" },
+    { name: "Financial Documents", description: "Financial statements or bank certificate" },
+  ]
+
+  useEffect(() => {
+    fetchVerificationData()
+  }, [])
+
+  const fetchVerificationData = async () => {
+    try {
+      const token = localStorage.getItem("token")
+      const response = await fetch(`${API_URL}/users/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setUser(data)
+        setDocuments(data.documents || [])
+      }
+    } catch (error) {
+      console.error("Failed to fetch verification data:", error)
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  const verifiedCount = documents.filter(d => d.status === "verified").length
-  const progress = (verifiedCount / documents.length) * 100
+  const handleFileUpload = async (docName: string, file: File | null) => {
+    if (!file) return
+    
+    try {
+      setUploadingDoc(docName)
+      const token = localStorage.getItem("token")
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("name", docName)
+      formData.append("description", requiredDocs.find(d => d.name === docName)?.description || "")
+      
+      const response = await fetch(`${API_URL}/users/me/documents`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      })
+      
+      if (response.ok) {
+        fetchVerificationData()
+      } else {
+        alert("Failed to upload document")
+      }
+    } catch (error) {
+      console.error("Upload error:", error)
+    } finally {
+      setUploadingDoc(null)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <p className="text-center text-gray-500">Failed to load verification data</p>
+  }
+
+  const verificationStatus = user.verificationStatus || "Pending"
+  const uploadedCount = documents.length
+  const totalRequired = requiredDocs.length
+  const progress = (uploadedCount / totalRequired) * 100
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Document Verification</h2>
-        <p className="text-gray-600">Manage your company documents and verification status</p>
+        <h2 className="text-2xl font-bold text-gray-900">Account Verification</h2>
+        <p className="text-gray-600">Submit required documents to verify your account</p>
       </div>
 
-      {/* Verification Status Alert */}
+      {/* Status Alert */}
       {verificationStatus === "Pending" && (
         <Alert className="bg-yellow-50 border-yellow-200">
           <Clock className="w-4 h-4 text-yellow-600" />
           <AlertTitle className="text-yellow-800">Verification Pending</AlertTitle>
           <AlertDescription className="text-yellow-700">
-            Your documents are under review. You will be notified once the verification is complete. 
-            This typically takes 1-2 business days.
+            Your documents are under review. You will be notified once the verification is complete.
           </AlertDescription>
         </Alert>
       )}
@@ -83,7 +116,7 @@ export default function VerificationPage() {
           <CheckCircle className="w-4 h-4 text-green-600" />
           <AlertTitle className="text-green-800">Account Verified</AlertTitle>
           <AlertDescription className="text-green-700">
-            Congratulations! Your account has been verified. You can now bid on all available projects.
+            Your account and all documents have been verified. You can now bid on all available projects.
           </AlertDescription>
         </Alert>
       )}
@@ -93,157 +126,91 @@ export default function VerificationPage() {
           <AlertTriangle className="w-4 h-4" />
           <AlertTitle>Verification Rejected</AlertTitle>
           <AlertDescription>
-            {rejectionReason || "Your verification was rejected. Please review the feedback below and resubmit your documents."}
+            Your verification was rejected. Please review the feedback and resubmit your documents.
           </AlertDescription>
         </Alert>
       )}
 
-      {/* Verification Progress */}
+      {/* Progress Card */}
       <Card>
         <CardHeader>
-          <CardTitle>Verification Progress</CardTitle>
-          <CardDescription>
-            {verifiedCount} of {documents.length} documents verified
-          </CardDescription>
+          <CardTitle>Document Submission Progress</CardTitle>
+          <CardDescription>Upload all required documents for verification</CardDescription>
         </CardHeader>
         <CardContent>
-          <Progress value={progress} className="h-2" />
-          <div className="flex justify-between mt-2 text-sm text-gray-500">
-            <span>{Math.round(progress)}% Complete</span>
-            <Badge variant={verificationStatus === "Verified" ? "default" : verificationStatus === "Pending" ? "secondary" : "destructive"}>
-              {verificationStatus}
-            </Badge>
+          <div className="mb-4">
+            <div className="flex justify-between mb-2">
+              <span className="text-sm text-gray-600">Completion</span>
+              <span className="text-sm font-medium">{uploadedCount}/{totalRequired}</span>
+            </div>
+            <Progress value={progress} className="h-2" />
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Documents List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Required Documents</CardTitle>
-          <CardDescription>Upload the following documents to complete your verification</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {documents.map((doc) => (
-            <div 
-              key={doc.id} 
-              className={`p-4 border rounded-lg ${
-                doc.status === "verified" 
-                  ? "bg-green-50 border-green-200" 
-                  : doc.status === "rejected"
-                  ? "bg-red-50 border-red-200"
-                  : "bg-white border-gray-200"
-              }`}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-3">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                    doc.status === "verified" 
-                      ? "bg-green-100" 
-                      : doc.status === "rejected"
-                      ? "bg-red-100"
-                      : "bg-gray-100"
-                  }`}>
-                    {doc.status === "verified" ? (
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                    ) : doc.status === "rejected" ? (
-                      <AlertTriangle className="w-5 h-5 text-red-600" />
-                    ) : (
-                      <FileText className="w-5 h-5 text-gray-600" />
-                    )}
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-gray-900">{doc.name}</h4>
-                    <p className="text-sm text-gray-500">{doc.description}</p>
-                    
-                    {doc.status === "verified" && (
-                      <div className="mt-2 text-sm text-gray-500">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">File:</span> {doc.fileName}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">Size:</span> {doc.fileSize}
-                          <span className="mx-1">•</span>
-                          <span>Submitted: {doc.submittedAt}</span>
-                        </div>
+          <div className="space-y-4">
+            {requiredDocs.map((doc) => {
+              const uploadedDoc = documents.find((d: any) => d.name === doc.name)
+              const isUploaded = !!uploadedDoc
+
+              return (
+                <div key={doc.name} className="p-4 border rounded-lg">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3">
+                      <div className={`w-8 h-8 rounded flex items-center justify-center ${isUploaded ? "bg-green-100" : "bg-gray-100"}`}>
+                        {isUploaded ? (
+                          <CheckCircle className="w-4 h-4 text-green-600" />
+                        ) : (
+                          <FileText className="w-4 h-4 text-gray-400" />
+                        )}
                       </div>
-                    )}
+                      <div>
+                        <h4 className="font-medium">{doc.name}</h4>
+                        <p className="text-sm text-gray-500">{doc.description}</p>
+                        {uploadedDoc && (
+                          <p className="text-xs text-gray-400 mt-1">
+                            Uploaded: {uploadedDoc.fileName} ({uploadedDoc.fileSize})
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isUploaded ? (
+                        <Badge className="bg-green-100 text-green-700">Uploaded</Badge>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            className="w-40 text-sm"
+                            onChange={(e) => handleFileUpload(doc.name, e.target.files?.[0] || null)}
+                            disabled={uploadingDoc === doc.name}
+                          />
+                          {uploadingDoc === doc.name && (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-2">
-                  {doc.status === "verified" ? (
-                    <>
-                      <Badge className="bg-green-100 text-green-700">Verified</Badge>
-                      <Button variant="ghost" size="icon">
-                        <Download className="w-4 h-4" />
-                      </Button>
-                    </>
-                  ) : doc.status === "rejected" ? (
-                    <Badge variant="destructive">Rejected</Badge>
-                  ) : (
-                    <Badge variant="outline">Pending</Badge>
-                  )}
-                </div>
-              </div>
-
-              {/* Upload Area - Only show if not verified */}
-              {doc.status !== "verified" && (
-                <div className="mt-4">
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors cursor-pointer">
-                    <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                    <p className="text-sm text-gray-600 mb-1">
-                      {uploadingDoc === doc.id ? "Uploading..." : "Drop your file here or click to browse"}
-                    </p>
-                    <p className="text-xs text-gray-400">PDF, JPG, or PNG (max 10MB)</p>
-                    <input
-                      type="file"
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      className="hidden"
-                      onChange={(e) => handleFileUpload(doc.id, e.target.files?.[0] || null)}
-                      disabled={uploadingDoc === doc.id}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
+              )
+            })}
+          </div>
         </CardContent>
       </Card>
 
-      {/* Additional Documents */}
+      {/* Instructions */}
       <Card>
         <CardHeader>
-          <CardTitle>Optional Documents</CardTitle>
-          <CardDescription>Additional documents that may strengthen your profile</CardDescription>
+          <CardTitle>Document Requirements</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="p-4 border rounded-lg bg-white border-gray-200">
-            <div className="flex items-start justify-between">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-gray-600" />
-                </div>
-                <div>
-                  <h4 className="font-medium text-gray-900">BIR Registration</h4>
-                  <p className="text-sm text-gray-500">Bureau of Internal Revenue Certificate of Registration</p>
-                </div>
-              </div>
-              <Badge variant="outline">Optional</Badge>
-            </div>
-            <div className="mt-4">
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors cursor-pointer">
-                <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                <p className="text-sm text-gray-600 mb-1">Upload optional document</p>
-                <p className="text-xs text-gray-400">PDF, JPG, or PNG (max 10MB)</p>
-                <input
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  className="hidden"
-                />
-              </div>
-            </div>
-          </div>
+        <CardContent>
+          <ul className="list-disc list-inside space-y-2 text-sm text-gray-600">
+            <li>All documents must be clear and readable</li>
+            <li>Accepted formats: PDF, JPG, PNG</li>
+            <li>Maximum file size: 10MB per document</li>
+            <li>Documents will be reviewed within 1-2 business days</li>
+            <li>You will be notified via email once verification is complete</li>
+          </ul>
         </CardContent>
       </Card>
     </div>

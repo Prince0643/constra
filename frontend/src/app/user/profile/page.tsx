@@ -1,85 +1,103 @@
 "use client"
 
-import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { useState, useEffect, useRef } from "react"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Upload, FileText, CheckCircle, Clock, AlertTriangle, Download, UserCircle, Mail, Phone, MapPin, Calendar } from "lucide-react"
-
-const documents = [
-  { 
-    id: 1, 
-    name: "DTI Registration", 
-    description: "Department of Trade and Industry Business Registration",
-    status: "verified", 
-    submittedAt: "2024-01-15",
-    fileName: "DTI_Registration_ABC_Corp.pdf",
-    fileSize: "2.4 MB"
-  },
-  { 
-    id: 2, 
-    name: "Business Permit", 
-    description: "Mayor's Business Permit",
-    status: "verified", 
-    submittedAt: "2024-01-15",
-    fileName: "Business_Permit_2024.pdf",
-    fileSize: "1.8 MB"
-  },
-  { 
-    id: 3, 
-    name: "Mayor's Permit", 
-    description: "Mayor's Permit to Operate",
-    status: "verified", 
-    submittedAt: "2024-01-15",
-    fileName: "Mayors_Permit_ABC_Corp.pdf",
-    fileSize: "1.2 MB"
-  },
-  { 
-    id: 4, 
-    name: "Financial Proposal Template", 
-    description: "Template for project bidding financial proposals",
-    status: "verified", 
-    submittedAt: "2024-01-20",
-    fileName: "Financial_Proposal_Template.pdf",
-    fileSize: "850 KB"
-  },
-  { 
-    id: 5, 
-    name: "Technical Specs Template", 
-    description: "Standard technical specifications document",
-    status: "verified", 
-    submittedAt: "2024-01-20",
-    fileName: "Technical_Specs_Template.pdf",
-    fileSize: "1.5 MB"
-  },
-  { 
-    id: 6, 
-    name: "Company Profile", 
-    description: "Company background and portfolio",
-    status: "verified", 
-    submittedAt: "2024-01-20",
-    fileName: "ABC_Company_Profile.pdf",
-    fileSize: "3.2 MB"
-  },
-]
+import { Button } from "@/components/ui/button"
+import { CheckCircle, Clock, AlertTriangle, UserCircle, Mail, Phone, MapPin, Calendar, Loader2, Upload, FileText, X } from "lucide-react"
 
 export default function ProfilePage() {
-  let verificationStatus: "Pending" | "Verified" | "Rejected" = "Verified"
-  const [uploadingDoc, setUploadingDoc] = useState<number | null>(null)
+  const [user, setUser] = useState<any>(null)
+  const [documents, setDocuments] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [uploadingDoc, setUploadingDoc] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleFileUpload = (docId: number, file: File | null) => {
-    if (file) {
-      setUploadingDoc(docId)
-      setTimeout(() => setUploadingDoc(null), 2000)
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"
+
+  const requiredDocs = [
+    { key: "dtiRegistration", name: "DTI Registration", description: "Department of Trade and Industry registration certificate" },
+    { key: "businessPermit", name: "Business Permit", description: "Valid business permit from local government" },
+    { key: "mayorsPermit", name: "Mayor's Permit", description: "Mayor's permit to operate" }
+  ]
+
+  useEffect(() => {
+    fetchProfile()
+  }, [])
+
+  const fetchProfile = async () => {
+    try {
+      const token = localStorage.getItem("token")
+      const response = await fetch(`${API_URL}/users/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setUser(data)
+        setDocuments(data.documents || [])
+      }
+    } catch (error) {
+      console.error("Failed to fetch profile:", error)
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  const verifiedCount = documents.filter(d => d.status === "verified").length
-  const progress = (verifiedCount / documents.length) * 100
+  const handleFileUpload = async (docType: string, file: File) => {
+    setUploadingDoc(docType)
+    try {
+      const token = localStorage.getItem("token")
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("name", requiredDocs.find(d => d.key === docType)?.name || docType)
+      formData.append("description", requiredDocs.find(d => d.key === docType)?.description || "")
+
+      const response = await fetch(`${API_URL}/users/me/documents`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      })
+
+      if (response.ok) {
+        await fetchProfile()
+      } else {
+        alert("Failed to upload document")
+      }
+    } catch (error) {
+      console.error("Upload error:", error)
+      alert("Failed to upload document")
+    } finally {
+      setUploadingDoc(null)
+    }
+  }
+
+  const hasDocument = (docType: string) => {
+    return documents.some(d => d.name === requiredDocs.find(r => r.key === docType)?.name)
+  }
+
+  const getDocument = (docType: string) => {
+    return documents.find(d => d.name === requiredDocs.find(r => r.key === docType)?.name)
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <p className="text-center text-gray-500">Failed to load profile</p>
+  }
+
+  const verificationStatus = user.verificationStatus || "Pending"
+  const verifiedCount = documents.filter((d: any) => d.status === "verified").length
+  const progress = documents.length > 0 ? (verifiedCount / documents.length) * 100 : 0
 
   return (
     <div className="space-y-6">
@@ -126,26 +144,26 @@ export default function ProfilePage() {
             <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <UserCircle className="w-12 h-12 text-blue-600" />
             </div>
-            <h3 className="text-xl font-semibold">ABC Construction Corp</h3>
+            <h3 className="text-xl font-semibold">{user.companyName || "Company Name"}</h3>
             <Badge className="mt-2" variant={verificationStatus === "Verified" ? "default" : verificationStatus === "Pending" ? "secondary" : "destructive"}>
               {verificationStatus}
             </Badge>
             <div className="mt-4 space-y-2 text-sm text-left">
               <div className="flex items-center gap-2 text-gray-600">
                 <Mail className="w-4 h-4" />
-                <span>user@abc-construction.com</span>
+                <span>{user.email}</span>
               </div>
               <div className="flex items-center gap-2 text-gray-600">
                 <Phone className="w-4 h-4" />
-                <span>+63 912 345 6789</span>
+                <span>{user.phoneNumber || "Not provided"}</span>
               </div>
               <div className="flex items-center gap-2 text-gray-600">
                 <MapPin className="w-4 h-4" />
-                <span>Metro Manila, Philippines</span>
+                <span>{user.businessAddress || "Not provided"}</span>
               </div>
               <div className="flex items-center gap-2 text-gray-600">
                 <Calendar className="w-4 h-4" />
-                <span>Member since Jan 2024</span>
+                <span>Member since {user.createdAt?.split('T')[0]}</span>
               </div>
             </div>
           </CardContent>
@@ -162,24 +180,24 @@ export default function ProfilePage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-sm font-medium text-gray-700">Company Name</Label>
-                  <p className="text-gray-900">ABC Construction Corporation</p>
+                  <p className="text-gray-900">{user.companyName || "N/A"}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-700">Business Type</Label>
-                  <p className="text-gray-900">Construction & Engineering</p>
+                  <p className="text-gray-900">{user.businessType || "N/A"}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-700">DTI Registration</Label>
-                  <p className="text-gray-900">DTI-123456-2024</p>
+                  <p className="text-gray-900">{user.dtiRegistration || "N/A"}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-700">TIN Number</Label>
-                  <p className="text-gray-900">123-456-789-000</p>
+                  <p className="text-gray-900">{user.tinNumber || "N/A"}</p>
                 </div>
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-700">Business Address</Label>
-                <p className="text-gray-900">123 Main Street, Makati City, Metro Manila, Philippines</p>
+                <p className="text-gray-900">{user.businessAddress || "N/A"}</p>
               </div>
             </CardContent>
           </Card>
@@ -187,52 +205,110 @@ export default function ProfilePage() {
           {/* Document Verification Progress */}
           <Card>
             <CardHeader>
-              <CardTitle>Company Documents</CardTitle>
-              <CardDescription>Required documents for bidding (managed here, attached automatically to bids)</CardDescription>
+              <CardTitle>Required Documents</CardTitle>
+              <CardDescription>Upload required documents for bidding verification</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="mb-4">
                 <div className="flex justify-between mb-2">
                   <span className="text-sm text-gray-600">Document Completion</span>
-                  <span className="text-sm font-medium">{verifiedCount}/{documents.length}</span>
+                  <span className="text-sm font-medium">
+                    {requiredDocs.filter(d => hasDocument(d.key)).length}/{requiredDocs.length}
+                  </span>
                 </div>
-                <Progress value={progress} className="h-2" />
+                <Progress 
+                  value={(requiredDocs.filter(d => hasDocument(d.key)).length / requiredDocs.length) * 100} 
+                  className="h-2" 
+                />
               </div>
 
-              <div className="space-y-3">
-                {documents.map((doc) => (
-                  <div key={doc.id} className="p-3 border rounded-lg bg-gray-50">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 bg-green-100 rounded flex items-center justify-center">
-                          <FileText className="w-4 h-4 text-green-600" />
-                        </div>
-                        <div>
-                          <h4 className="font-medium text-sm">{doc.name}</h4>
-                          <p className="text-xs text-gray-500">{doc.description}</p>
-                          <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
-                            <span>{doc.fileName}</span>
-                            <span>•</span>
-                            <span>{doc.fileSize}</span>
+              <div className="space-y-4">
+                {requiredDocs.map((doc) => {
+                  const uploadedDoc = getDocument(doc.key)
+                  const isUploaded = !!uploadedDoc
+
+                  return (
+                    <div 
+                      key={doc.key} 
+                      className={`border-2 border-dashed rounded-lg p-4 transition-colors ${
+                        isUploaded ? 'border-green-300 bg-green-50' : 'border-gray-300 hover:border-blue-500'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            {isUploaded ? (
+                              <CheckCircle className="w-5 h-5 text-green-600" />
+                            ) : (
+                              <FileText className="w-5 h-5 text-gray-400" />
+                            )}
+                            <h4 className={`font-medium ${isUploaded ? 'text-green-800' : 'text-gray-900'}`}>
+                              {doc.name}
+                            </h4>
+                            {isUploaded && (
+                              <Badge className="bg-green-100 text-green-700">Uploaded</Badge>
+                            )}
                           </div>
+                          <p className="text-xs text-gray-500 mt-1 ml-7">{doc.description}</p>
+                          
+                          {isUploaded && uploadedDoc && (
+                            <div className="ml-7 mt-2 text-xs text-gray-600">
+                              <p>File: {uploadedDoc.fileName}</p>
+                              <p>Size: {uploadedDoc.fileSize}</p>
+                              <p>Status: <span className={uploadedDoc.status === 'verified' ? 'text-green-600' : 'text-yellow-600'}>{uploadedDoc.status}</span></p>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge className="bg-green-100 text-green-700 text-xs">Verified</Badge>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <Download className="w-4 h-4" />
-                        </Button>
+
+                        {!isUploaded ? (
+                          <div className="ml-4">
+                            <Input
+                              type="file"
+                              accept=".pdf,.jpg,.jpeg,.png"
+                              className="hidden"
+                              id={`file-${doc.key}`}
+                              onChange={(e) => {
+                                const file = e.target.files?.[0]
+                                if (file) handleFileUpload(doc.key, file)
+                              }}
+                              disabled={uploadingDoc === doc.key}
+                            />
+                            <Label htmlFor={`file-${doc.key}`}>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="cursor-pointer"
+                                disabled={uploadingDoc === doc.key}
+                                asChild
+                              >
+                                <span>
+                                  {uploadingDoc === doc.key ? (
+                                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                                  ) : (
+                                    <Upload className="w-4 h-4 mr-1" />
+                                  )}
+                                  {uploadingDoc === doc.key ? 'Uploading...' : 'Upload'}
+                                </span>
+                              </Button>
+                            </Label>
+                          </div>
+                        ) : (
+                          <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Done
+                          </Badge>
+                        )}
                       </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
 
-              <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+              <div className="mt-6 p-4 bg-blue-50 rounded-lg">
                 <h4 className="font-medium text-sm text-blue-900 mb-1">Documents Auto-Attached to Bids</h4>
                 <p className="text-sm text-blue-700">
-                  These documents are pre-verified in your profile. When you place a bid, 
-                  the system automatically attaches them to your submission - no need to upload again!
+                  These documents are required for bidding verification. Once uploaded and verified, 
+                  they will be automatically attached to all your bid submissions.
                 </p>
               </div>
             </CardContent>

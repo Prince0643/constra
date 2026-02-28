@@ -1,57 +1,124 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Gavel, Clock, CheckCircle, XCircle, TrendingUp, FileText, AlertTriangle } from "lucide-react"
+import { 
+  FolderOpen, 
+  Gavel, 
+  TrendingUp, 
+  Clock, 
+  CheckCircle, 
+  AlertTriangle,
+  Loader2
+} from "lucide-react"
 import Link from "next/link"
 
-const stats = [
-  { title: "Total Bids", value: "12", icon: Gavel },
-  { title: "Active Bids", value: "3", icon: Clock },
-  { title: "Projects Won", value: "2", icon: CheckCircle },
-  { title: "Win Rate", value: "16.7%", icon: TrendingUp },
-]
-
-const recentBids = [
-  { id: 1, project: "School Building Construction", bidAmount: "₱24,500,000", status: "Submitted", deadline: "2024-03-10", submittedAt: "2024-03-05" },
-  { id: 2, project: "Road Paving - District 5", bidAmount: "₱14,800,000", status: "Under Evaluation", deadline: "2024-03-20", submittedAt: "2024-03-08" },
-  { id: 3, project: "Bridge Rehabilitation", bidAmount: "₱34,200,000", status: "Not Awarded", deadline: "2024-02-28", submittedAt: "2024-02-20" },
-]
-
-const statusColors: Record<string, string> = {
-  "Submitted": "bg-blue-100 text-blue-700",
-  "Under Evaluation": "bg-yellow-100 text-yellow-700",
-  "Won": "bg-green-100 text-green-700",
-  "Not Awarded": "bg-gray-100 text-gray-700",
-}
-
 export default function UserDashboard() {
-  // Mock verification status - change this to test different states
-  let verificationStatus: "Pending" | "Verified" | "Rejected" = "Verified"
+  const [stats, setStats] = useState({
+    activeProjects: 0,
+    myBids: 0,
+    wonProjects: 0,
+    pendingBids: 0
+  })
+  const [recentBids, setRecentBids] = useState<any[]>([])
+  const [verificationStatus, setVerificationStatus] = useState<string>("Verified")
+  const [isLoading, setIsLoading] = useState(true)
+  const [user, setUser] = useState<any>(null)
+
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"
+
+  useEffect(() => {
+    fetchDashboardData()
+  }, [])
+
+  const fetchDashboardData = async () => {
+    try {
+      const token = localStorage.getItem("token")
+      
+      // Fetch user data
+      const userRes = await fetch(`${API_URL}/users/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const userData = userRes.ok ? await userRes.json() : null
+      setUser(userData)
+      setVerificationStatus(userData?.verificationStatus || "Pending")
+      
+      // Fetch projects
+      const projectsRes = await fetch(`${API_URL}/projects`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const projects = projectsRes.ok ? await projectsRes.json() : []
+      
+      // Fetch bids
+      const bidsRes = await fetch(`${API_URL}/bids`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const bids = bidsRes.ok ? await bidsRes.json() : []
+      
+      setStats({
+        activeProjects: projects.filter((p: any) => p.status === "Open").length,
+        myBids: bids.length,
+        wonProjects: bids.filter((b: any) => b.bidStatus === "Won").length,
+        pendingBids: bids.filter((b: any) => b.bidStatus === "Submitted" || b.bidStatus === "Under Evaluation").length
+      })
+      
+      setRecentBids(bids.slice(0, 3))
+    } catch (error) {
+      console.error("Failed to fetch dashboard data:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const formatCurrency = (amount: number) => {
+    return "₱" + amount?.toLocaleString()
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
-      {/* Verification Alert */}
+      {/* Verification Status Alert */}
       {verificationStatus === "Pending" && (
         <Alert className="bg-yellow-50 border-yellow-200">
-          <AlertTriangle className="w-4 h-4 text-yellow-600" />
+          <Clock className="w-4 h-4 text-yellow-600" />
           <AlertTitle className="text-yellow-800">Verification Pending</AlertTitle>
           <AlertDescription className="text-yellow-700">
-            Your account is under review. Please wait for admin approval before bidding on projects. This typically takes 1-2 business days.
+            Your account is under review. You'll be able to place bids once verified.
+            <Link href="/user/verification" className="ml-1 underline font-medium">
+              Check status
+            </Link>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {verificationStatus === "Verified" && (
+        <Alert className="bg-green-50 border-green-200">
+          <CheckCircle className="w-4 h-4 text-green-600" />
+          <AlertTitle className="text-green-800">Account Verified</AlertTitle>
+          <AlertDescription className="text-green-700">
+            Your account is verified. You can now bid on all available projects.
           </AlertDescription>
         </Alert>
       )}
 
       {verificationStatus === "Rejected" && (
         <Alert variant="destructive">
-          <XCircle className="w-4 h-4" />
+          <AlertTriangle className="w-4 h-4" />
           <AlertTitle>Verification Rejected</AlertTitle>
           <AlertDescription>
-            Your verification was rejected. Please review the feedback and resubmit your documents.
-            <Link href="/user/verification" className="ml-2 underline">
-              Go to Verification
+            Your verification was rejected. Please review the requirements and resubmit.
+            <Link href="/user/verification" className="ml-1 underline font-medium">
+              Update documents
             </Link>
           </AlertDescription>
         </Alert>
@@ -59,57 +126,103 @@ export default function UserDashboard() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, index) => {
-          const Icon = stat.icon
-          return (
-            <Card key={index}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">
-                  {stat.title}
-                </CardTitle>
-                <Icon className="w-4 h-4 text-gray-400" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-              </CardContent>
-            </Card>
-          )
-        })}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">
+              Open Projects
+            </CardTitle>
+            <FolderOpen className="w-4 h-4 text-gray-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.activeProjects}</div>
+            <p className="text-xs text-gray-500">Available for bidding</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">
+              My Bids
+            </CardTitle>
+            <Gavel className="w-4 h-4 text-gray-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.myBids}</div>
+            <p className="text-xs text-gray-500">{stats.pendingBids} pending</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">
+              Won Projects
+            </CardTitle>
+            <TrendingUp className="w-4 h-4 text-gray-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.wonProjects}</div>
+            <p className="text-xs text-gray-500">Successful bids</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">
+              Pending
+            </CardTitle>
+            <Clock className="w-4 h-4 text-gray-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.pendingBids}</div>
+            <p className="text-xs text-gray-500">Under evaluation</p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Main Content */}
+      {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Bids */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle>Recent Bids</CardTitle>
-              <CardDescription>Track your recent bidding activity</CardDescription>
+              <CardDescription>Your latest bid submissions</CardDescription>
             </div>
-            <Link href="/user/bids">
-              <Button variant="outline" size="sm">View All</Button>
+            <Link href="/user/projects">
+              <Button size="sm">
+                <FolderOpen className="w-4 h-4 mr-2" />
+                Find Projects
+              </Button>
             </Link>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentBids.map((bid) => (
-                <div key={bid.id} className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
-                  <div className="flex items-start justify-between">
+              {recentBids.length === 0 ? (
+                <p className="text-gray-500 text-center py-4">No bids submitted yet</p>
+              ) : (
+                recentBids.map((bid) => (
+                  <div key={bid.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
                     <div>
-                      <h4 className="font-medium text-gray-900">{bid.project}</h4>
-                      <p className="text-sm text-gray-500 mt-1">Bid: {bid.bidAmount}</p>
-                      <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
-                        <span>Deadline: {bid.deadline}</span>
-                        <span>•</span>
-                        <span>Submitted: {bid.submittedAt}</span>
-                      </div>
+                      <h4 className="font-medium text-gray-900">{bid.projectTitle}</h4>
+                      <p className="text-sm text-gray-500">Bid: {formatCurrency(bid.bidAmount)}</p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Submitted: {bid.submittedAt?.split('T')[0]}
+                      </p>
                     </div>
-                    <Badge className={statusColors[bid.status]}>
-                      {bid.status}
+                    <Badge 
+                      variant={bid.bidStatus === "Won" ? "default" : bid.bidStatus === "Submitted" ? "secondary" : "outline"}
+                      className={bid.bidStatus === "Won" ? "bg-green-100 text-green-700" : ""}
+                    >
+                      {bid.bidStatus}
                     </Badge>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
+            </div>
+            <div className="mt-4 text-center">
+              <Link href="/user/bids" className="text-sm text-blue-600 hover:underline">
+                View all bids →
+              </Link>
             </div>
           </CardContent>
         </Card>
@@ -118,43 +231,32 @@ export default function UserDashboard() {
         <Card>
           <CardHeader>
             <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Common tasks and navigation</CardDescription>
+            <CardDescription>Common tasks and shortcuts</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               <Link href="/user/projects">
-                <Button variant="outline" className="w-full justify-start gap-3 h-auto py-4">
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <Gavel className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div className="text-left">
-                    <div className="font-medium">Find Projects</div>
-                    <div className="text-sm text-gray-500">Browse and bid on new opportunities</div>
-                  </div>
+                <Button variant="outline" className="w-full justify-start gap-3">
+                  <FolderOpen className="w-4 h-4" />
+                  Browse Available Projects
                 </Button>
               </Link>
-              
-              <Link href="/user/verification">
-                <Button variant="outline" className="w-full justify-start gap-3 h-auto py-4">
-                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                    <FileText className="w-5 h-5 text-green-600" />
-                  </div>
-                  <div className="text-left">
-                    <div className="font-medium">Verification Status</div>
-                    <div className="text-sm text-gray-500">Check your document verification status</div>
-                  </div>
-                </Button>
-              </Link>
-
               <Link href="/user/bids">
-                <Button variant="outline" className="w-full justify-start gap-3 h-auto py-4">
-                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <Clock className="w-5 h-5 text-purple-600" />
-                  </div>
-                  <div className="text-left">
-                    <div className="font-medium">Track Bids</div>
-                    <div className="text-sm text-gray-500">Monitor your bid statuses and results</div>
-                  </div>
+                <Button variant="outline" className="w-full justify-start gap-3">
+                  <Gavel className="w-4 h-4" />
+                  View My Bids
+                </Button>
+              </Link>
+              <Link href="/user/profile">
+                <Button variant="outline" className="w-full justify-start gap-3">
+                  <CheckCircle className="w-4 h-4" />
+                  Update Company Profile
+                </Button>
+              </Link>
+              <Link href="/user/verification">
+                <Button variant="outline" className="w-full justify-start gap-3">
+                  <AlertTriangle className="w-4 h-4" />
+                  Check Verification Status
                 </Button>
               </Link>
             </div>

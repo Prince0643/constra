@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id                  Int           @id @default(autoincrement())
+  email               String        @unique
+  password            String
+  companyName         String?
+  businessType        String?
+  dtiRegistration     String?
+  tinNumber           String?
+  businessAddress     String?
+  phoneNumber         String?
+  verificationStatus  String        @default("Pending")
+  role                String        @default("User")
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  
+  bids                Bid[]
+  documents           Document[]
+}
+
+model Document {
+  id          Int       @id @default(autoincrement())
+  name        String
+  description String?
+  fileName    String
+  filePath    String
+  fileSize    String
+  status      String    @default("Pending")
+  userId      Int
+  user        User      @relation(fields: [userId], references: [id])
+  createdAt   DateTime  @default(now())
+}
+
+model Project {
+  id              Int       @id @default(autoincrement())
+  title           String
+  description     String
+  abc             Float
+  location        String
+  deadline        DateTime
+  status          String    @default("Open")
+  category        String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  bids            Bid[]
+  requirements    ProjectRequirement[]
+}
+
+model ProjectRequirement {
+  id          Int     @id @default(autoincrement())
+  name        String
+  description String?
+  required    Boolean @default(true)
+  projectId   Int
+  project     Project @relation(fields: [projectId], references: [id])
+}
+
+model Bid {
+  id                Int       @id @default(autoincrement())
+  bidAmount         Float
+  notes             String?
+  complianceStatus  String    @default("Pending")
+  bidStatus         String    @default("Submitted")
+  submittedAt       DateTime  @default(now())
+  
+  userId            Int
+  user              User      @relation(fields: [userId], references: [id])
+  projectId         Int
+  project           Project   @relation(fields: [projectId], references: [id])
+}

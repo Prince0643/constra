@@ -1,16 +1,17 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { Building2, LayoutDashboard, FolderPlus, BarChart3, Users, Settings, LogOut } from "lucide-react"
+import { Building2, LayoutDashboard, FolderPlus, BarChart3, Users, Settings, LogOut, FileCheck } from "lucide-react"
 
 const navItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/projects", label: "Projects", icon: FolderPlus },
-  { href: "/admin/bids", label: "Bid Analytics", icon: BarChart3 },
+  { href: "/admin/bids", label: "All Bids", icon: BarChart3 },
   { href: "/admin/users", label: "Users", icon: Users },
+  { href: "/admin/verification", label: "Doc Verification", icon: FileCheck },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ]
 
@@ -20,6 +21,13 @@ export default function AdminLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  const router = useRouter()
+  
+  const handleSignOut = () => {
+    localStorage.removeItem("token")
+    localStorage.removeItem("user")
+    router.push("/login")
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -59,7 +67,7 @@ export default function AdminLayout({
 
           {/* Footer */}
           <div className="px-4 py-4 border-t border-gray-200">
-            <Button variant="ghost" className="w-full justify-start gap-3 text-gray-600 hover:text-gray-900">
+            <Button variant="ghost" className="w-full justify-start gap-3 text-gray-600 hover:text-gray-900" onClick={handleSignOut}>
               <LogOut className="w-5 h-5" />
               Sign Out
             </Button>

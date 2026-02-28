@@ -26,19 +26,33 @@ export default function LoginPage() {
     setError("")
 
     try {
-      // Mock authentication - replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"
       
-      // Demo credentials for testing
-      if (formData.email === "admin@constra.com" && formData.password === "admin123") {
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData)
+      })
+      
+      const data = await response.json()
+      
+      if (!response.ok) {
+        setError(data.error || "Invalid credentials")
+        return
+      }
+      
+      // Store token and user data
+      localStorage.setItem("token", data.token)
+      localStorage.setItem("user", JSON.stringify(data.user))
+      
+      // Redirect based on role
+      if (data.user.role === "Admin") {
         router.push("/admin/dashboard")
-      } else if (formData.email === "user@constra.com" && formData.password === "user123") {
-        router.push("/user/dashboard")
       } else {
-        setError("Invalid credentials. Try admin@constra.com / admin123 or user@constra.com / user123")
+        router.push("/user/dashboard")
       }
     } catch (err) {
-      setError("An error occurred. Please try again.")
+      setError("Failed to connect to server. Please try again.")
     } finally {
       setIsLoading(false)
     }

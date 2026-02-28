@@ -1,16 +1,17 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { Building2, LayoutDashboard, FolderSearch, Gavel, UserCircle, FileText, LogOut } from "lucide-react"
+import { Building2, LayoutDashboard, FolderSearch, Gavel, UserCircle, FileText, LogOut, ClipboardCheck } from "lucide-react"
 
 const navItems = [
   { href: "/user/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/user/projects", label: "Find Projects", icon: FolderSearch },
   { href: "/user/bids", label: "My Bids", icon: Gavel },
+  { href: "/user/requirements", label: "My Requirements", icon: ClipboardCheck },
   { href: "/user/verification", label: "Verification", icon: FileText },
   { href: "/user/profile", label: "Profile", icon: UserCircle },
 ]
@@ -21,7 +22,14 @@ export default function UserLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  const router = useRouter()
   
+  const handleSignOut = () => {
+    localStorage.removeItem("token")
+    localStorage.removeItem("user")
+    router.push("/login")
+  }
+
   // Mock verification status - in real app this comes from API
   const verificationStatus = "Verified" // "Pending", "Verified", "Rejected"
 
@@ -89,7 +97,7 @@ export default function UserLayout({
 
           {/* Footer */}
           <div className="px-4 py-4 border-t border-gray-200">
-            <Button variant="ghost" className="w-full justify-start gap-3 text-gray-600 hover:text-gray-900">
+            <Button variant="ghost" className="w-full justify-start gap-3 text-gray-600 hover:text-gray-900" onClick={handleSignOut}>
               <LogOut className="w-5 h-5" />
               Sign Out
             </Button>

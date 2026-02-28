@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -10,97 +10,60 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Search, MapPin, Calendar, DollarSign, FileText, Gavel, Clock, AlertTriangle } from "lucide-react"
+import { Search, MapPin, Calendar, DollarSign, FileText, Gavel, Clock, AlertTriangle, Loader2 } from "lucide-react"
 import Link from "next/link"
-
-const projects = [
-  { 
-    id: 1, 
-    title: "Highway Expansion Project", 
-    description: "Expansion of the North Luzon Expressway to accommodate increased traffic volume. Includes construction of additional lanes and interchanges.",
-    abc: 50000000, 
-    location: "Metro Manila", 
-    status: "Open", 
-    deadline: "2024-03-15",
-    bids: 8,
-    category: "Infrastructure",
-    requirements: ["Financial Proposal", "Technical Specifications", "Company Profile"]
-  },
-  { 
-    id: 2, 
-    title: "School Building Construction", 
-    description: "Construction of a 3-story school building with 24 classrooms, library, and auditorium. Must comply with DPWH standards.",
-    abc: 25000000, 
-    location: "Cebu City", 
-    status: "Open", 
-    deadline: "2024-03-20",
-    bids: 12,
-    category: "Education",
-    requirements: ["Financial Proposal", "Technical Specifications", "Company Profile", "Certificate of PhilGEPS Registration"]
-  },
-  { 
-    id: 3, 
-    title: "Road Paving - District 5", 
-    description: "Asphalt paving of 5km municipal roads including drainage improvements and road markings.",
-    abc: 15000000, 
-    location: "Quezon City", 
-    status: "Open", 
-    deadline: "2024-03-25",
-    bids: 15,
-    category: "Infrastructure",
-    requirements: ["Financial Proposal", "Technical Specifications"]
-  },
-  { 
-    id: 4, 
-    title: "Government Office Renovation", 
-    description: "Renovation of 3-story government office building including electrical, plumbing, and HVAC upgrades.",
-    abc: 8000000, 
-    location: "Makati City", 
-    status: "Open", 
-    deadline: "2024-03-30",
-    bids: 6,
-    category: "Renovation",
-    requirements: ["Financial Proposal", "Technical Specifications", "Company Profile"]
-  },
-  { 
-    id: 5, 
-    title: "Water Treatment Facility", 
-    description: "Construction of water treatment facility with capacity of 5000 cubic meters per day.",
-    abc: 75000000, 
-    location: "Davao City", 
-    status: "Open", 
-    deadline: "2024-04-05",
-    bids: 4,
-    category: "Utilities",
-    requirements: ["Financial Proposal", "Technical Specifications", "Company Profile", "Certificate of PhilGEPS Registration", "Environmental Compliance Certificate"]
-  },
-]
-
-function formatCurrency(amount: number) {
-  return "₱" + amount.toLocaleString()
-}
-
-function getDaysRemaining(deadline: string) {
-  const today = new Date()
-  const deadlineDate = new Date(deadline)
-  const diffTime = deadlineDate.getTime() - today.getTime()
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  return diffDays
-}
 
 export default function ProjectsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [locationFilter, setLocationFilter] = useState("all")
   const [categoryFilter, setCategoryFilter] = useState("all")
-  const [selectedProject, setSelectedProject] = useState<typeof projects[0] | null>(null)
+  const [projects, setProjects] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [selectedProject, setSelectedProject] = useState<any | null>(null)
   const [isBidDialogOpen, setIsBidDialogOpen] = useState(false)
   const [bidAmount, setBidAmount] = useState("")
   const [bidNotes, setBidNotes] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitSuccess, setSubmitSuccess] = useState(false)
 
-  // Mock verification status
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"
+  
+  // Mock verification status - in real app this comes from API
   let verificationStatus: "Pending" | "Verified" | "Rejected" = "Verified"
+
+  // Fetch projects on load
+  useEffect(() => {
+    fetchProjects()
+  }, [])
+
+  const fetchProjects = async () => {
+    try {
+      const token = localStorage.getItem("token")
+      const response = await fetch(`${API_URL}/projects`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setProjects(data)
+      }
+    } catch (error) {
+      console.error("Failed to fetch projects:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  function formatCurrency(amount: number) {
+    return "₱" + amount.toLocaleString()
+  }
+
+  function getDaysRemaining(deadline: string) {
+    const today = new Date()
+    const deadlineDate = new Date(deadline)
+    const diffTime = deadlineDate.getTime() - today.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    return diffDays
+  }
 
   const filteredProjects = projects.filter(project => {
     const matchesSearch = project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -117,18 +80,39 @@ export default function ProjectsPage() {
     e.preventDefault()
     setIsSubmitting(true)
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    
-    setIsSubmitting(false)
-    setSubmitSuccess(true)
-    
-    setTimeout(() => {
-      setIsBidDialogOpen(false)
-      setSubmitSuccess(false)
-      setBidAmount("")
-      setBidNotes("")
-    }, 2000)
+    try {
+      const token = localStorage.getItem("token")
+      const response = await fetch(`${API_URL}/bids`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          projectId: selectedProject?.id,
+          bidAmount: parseFloat(bidAmount),
+          notes: bidNotes
+        })
+      })
+      
+      if (response.ok) {
+        setSubmitSuccess(true)
+        setTimeout(() => {
+          setIsBidDialogOpen(false)
+          setSubmitSuccess(false)
+          setBidAmount("")
+          setBidNotes("")
+        }, 2000)
+      } else {
+        const error = await response.json()
+        alert(error.message || "Failed to submit bid")
+      }
+    } catch (error) {
+      console.error("Bid submission error:", error)
+      alert("Failed to submit bid. Please try again.")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -259,11 +243,11 @@ export default function ProjectsPage() {
                       Place Bid
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-lg">
+                    <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                      <DialogTitle>Submit Bid</DialogTitle>
-                      <DialogDescription>
-                        Submit your bid for {selectedProject?.title}
+                      <DialogTitle className="text-center text-xl font-bold">Invitation to Bid (ITB)</DialogTitle>
+                      <DialogDescription className="text-center">
+                        Review the project details before placing your bid
                       </DialogDescription>
                     </DialogHeader>
                     
@@ -280,55 +264,137 @@ export default function ProjectsPage() {
                       </div>
                     ) : (
                       <form onSubmit={handleSubmitBid} className="space-y-4">
-                        <div className="p-4 bg-gray-50 rounded-lg">
-                          <div className="text-sm text-gray-600 mb-1">Project Budget (ABC)</div>
-                          <div className="text-lg font-semibold">{selectedProject && formatCurrency(selectedProject.abc)}</div>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label htmlFor="bidAmount">Your Bid Amount (₱)</Label>
-                          <Input
-                            id="bidAmount"
-                            type="number"
-                            placeholder="Enter your bid amount"
-                            value={bidAmount}
-                            onChange={(e) => setBidAmount(e.target.value)}
-                            required
-                          />
-                          <p className="text-xs text-gray-500">
-                            Enter the total amount for your proposed bid
-                          </p>
+                        {/* ITB Project Details Section */}
+                        <div className="border rounded-lg overflow-hidden">
+                          <div className="bg-gray-100 p-3 border-b">
+                            <h3 className="font-bold text-center text-lg">Bid Notice Abstract</h3>
+                          </div>
+                          
+                          <table className="w-full text-sm">
+                            <tbody>
+                              <tr className="border-b">
+                                <td className="p-3 bg-gray-50 font-medium w-1/3">Reference Number</td>
+                                <td className="p-3">PROJ-{selectedProject?.id?.toString().padStart(6, '0')}</td>
+                              </tr>
+                              <tr className="border-b">
+                                <td className="p-3 bg-gray-50 font-medium">Procuring Entity</td>
+                                <td className="p-3">{selectedProject?.location || "N/A"}</td>
+                              </tr>
+                              <tr className="border-b">
+                                <td className="p-3 bg-gray-50 font-medium">Title</td>
+                                <td className="p-3 font-semibold">{selectedProject?.title}</td>
+                              </tr>
+                              <tr className="border-b">
+                                <td className="p-3 bg-gray-50 font-medium">Area of Delivery</td>
+                                <td className="p-3">{selectedProject?.location}</td>
+                              </tr>
+                              <tr className="border-b">
+                                <td className="p-3 bg-gray-50 font-medium">Solicitation Number</td>
+                                <td className="p-3">SN-{selectedProject?.id}-{new Date().getFullYear()}</td>
+                              </tr>
+                              <tr className="border-b">
+                                <td className="p-3 bg-gray-50 font-medium">Procurement Mode</td>
+                                <td className="p-3">Public Bidding</td>
+                              </tr>
+                              <tr className="border-b">
+                                <td className="p-3 bg-gray-50 font-medium">Category</td>
+                                <td className="p-3">{selectedProject?.category || "Infrastructure"}</td>
+                              </tr>
+                              <tr className="border-b">
+                                <td className="p-3 bg-gray-50 font-medium">Approved Budget</td>
+                                <td className="p-3 font-semibold text-green-700">{selectedProject && formatCurrency(selectedProject.abc)}</td>
+                              </tr>
+                              <tr className="border-b">
+                                <td className="p-3 bg-gray-50 font-medium">Bid Deadline</td>
+                                <td className="p-3">{selectedProject?.deadline?.split('T')[0]}</td>
+                              </tr>
+                              <tr>
+                                <td className="p-3 bg-gray-50 font-medium">Status</td>
+                                <td className="p-3">
+                                  <Badge className={selectedProject?.status === 'Open' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}>
+                                    {selectedProject?.status}
+                                  </Badge>
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                          
+                          {/* Description Section */}
+                          <div className="p-4 border-t bg-white">
+                            <h4 className="font-bold mb-2 text-gray-900">Description</h4>
+                            <p className="text-sm text-gray-700 leading-relaxed">
+                              {selectedProject?.description || "No detailed description provided."}
+                            </p>
+                          </div>
+                          
+                          {/* Required Documents */}
+                          {selectedProject?.requirements && selectedProject.requirements.length > 0 && (
+                            <div className="p-4 border-t bg-gray-50">
+                              <h4 className="font-bold mb-3 text-gray-900">Documentary Requirements</h4>
+                              <table className="w-full text-sm border">
+                                <thead>
+                                  <tr className="bg-gray-100">
+                                    <th className="p-2 border text-left">Requirement</th>
+                                    <th className="p-2 border text-center w-20">Status</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {selectedProject.requirements.map((req: any, index: number) => (
+                                    <tr key={index} className="border-b">
+                                      <td className="p-2 border">{req.name || req}</td>
+                                      <td className="p-2 border text-center">
+                                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">Required</span>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
                         </div>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="bidNotes">Technical Approach / Notes</Label>
-                          <Textarea
-                            id="bidNotes"
-                            placeholder="Describe your technical approach, timeline, and any other relevant information..."
-                            rows={3}
-                            value={bidNotes}
-                            onChange={(e) => setBidNotes(e.target.value)}
-                          />
+                        {/* Bid Submission Section */}
+                        <div className="border-t pt-4">
+                          <h4 className="font-bold text-lg mb-4 text-gray-900">Bid Submission</h4>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor="bidAmount" className="font-medium">Bid Amount (₱)</Label>
+                            <Input
+                              id="bidAmount"
+                              type="number"
+                              placeholder="Enter your bid amount"
+                              value={bidAmount}
+                              onChange={(e) => setBidAmount(e.target.value)}
+                              required
+                              className="text-lg"
+                            />
+                            <p className="text-xs text-gray-500">
+                              Maximum allowed: {selectedProject && formatCurrency(selectedProject.abc)} (ABC)
+                            </p>
+                          </div>
+
+                          <div className="space-y-2 mt-4">
+                            <Label htmlFor="bidNotes" className="font-medium">Technical Approach / Notes</Label>
+                            <Textarea
+                              id="bidNotes"
+                              placeholder="Describe your technical approach, timeline, methodology, and any other relevant information..."
+                              rows={4}
+                              value={bidNotes}
+                              onChange={(e) => setBidNotes(e.target.value)}
+                            />
+                          </div>
                         </div>
 
-                        <div className="p-4 bg-blue-50 rounded-lg">
+                        <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                           <div className="flex items-start gap-3">
                             <FileText className="w-5 h-5 text-blue-600 mt-0.5" />
                             <div>
                               <h4 className="font-medium text-sm text-blue-900">Documents Auto-Attached</h4>
                               <p className="text-sm text-blue-700 mt-1">
-                                Your pre-verified documents from your profile will be automatically attached to this bid:
+                                Your pre-verified company documents from your profile will be automatically attached to this bid.
                               </p>
-                              <ul className="text-sm text-blue-700 mt-2 space-y-1">
-                                {selectedProject?.requirements.map((req, index) => (
-                                  <li key={index} className="flex items-center gap-2">
-                                    <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
-                                    {req}
-                                  </li>
-                                ))}
-                              </ul>
                               <p className="text-xs text-blue-600 mt-2">
-                                Manage your documents in <a href="/user/profile" className="underline font-medium">Profile &gt; Company Documents</a>
+                                Manage documents in <a href="/user/profile" className="underline font-medium">Profile</a>
                               </p>
                             </div>
                           </div>
@@ -338,7 +404,7 @@ export default function ProjectsPage() {
                           <Button type="button" variant="outline" onClick={() => setIsBidDialogOpen(false)}>
                             Cancel
                           </Button>
-                          <Button type="submit" disabled={isSubmitting}>
+                          <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700">
                             {isSubmitting ? "Submitting..." : "Submit Bid"}
                           </Button>
                         </DialogFooter>

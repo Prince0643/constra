@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Plus, Search, FileText, Eye, Edit, Trash2 } from "lucide-react"
+import { Plus, Search, FileText, Eye, Edit, Trash2, Loader2, XCircle } from "lucide-react"
 
 const projects = [
   { id: 1, title: "Highway Expansion Project", abc: "₱50,000,000", location: "Metro Manila", status: "Open", deadline: "2024-03-15", bids: 8 },
@@ -28,6 +28,13 @@ const requirementTemplates = [
 
 export default function ProjectsPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [selectedProject, setSelectedProject] = useState<any>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [projects, setProjects] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [formData, setFormData] = useState({
     title: "",
     abc: "",
@@ -37,11 +44,154 @@ export default function ProjectsPage() {
     requirements: [] as string[],
   })
 
-  const handleCreateProject = (e: React.FormEvent) => {
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"
+
+  // Fetch projects on load
+  useEffect(() => {
+    fetchProjects()
+  }, [])
+
+  const fetchProjects = async () => {
+    try {
+      const token = localStorage.getItem("token")
+      const response = await fetch(`${API_URL}/projects`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setProjects(data)
+      }
+    } catch (error) {
+      console.error("Failed to fetch projects:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Mock project creation
-    setIsCreateDialogOpen(false)
-    setFormData({ title: "", abc: "", location: "", deadline: "", description: "", requirements: [] })
+    setIsSubmitting(true)
+    
+    try {
+      const token = localStorage.getItem("token")
+      const requirements = requirementTemplates
+        .filter(req => formData.requirements.includes(req.name))
+        .map(req => ({ name: req.name, description: req.description, required: req.required }))
+      
+      const response = await fetch(`${API_URL}/projects`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: formData.title,
+          description: formData.description,
+          abc: parseFloat(formData.abc),
+          location: formData.location,
+          deadline: formData.deadline,
+          category: "Infrastructure",
+          requirements
+        })
+      })
+      
+      if (response.ok) {
+        setIsCreateDialogOpen(false)
+        setFormData({ title: "", abc: "", location: "", deadline: "", description: "", requirements: [] })
+        fetchProjects() // Refresh the list
+      } else {
+        const error = await response.json()
+        alert(error.error || "Failed to create project")
+      }
+    } catch (error) {
+      console.error("Create project error:", error)
+      alert("Failed to create project")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleDeleteProject = async () => {
+    if (!selectedProject) return
+    
+    try {
+      const token = localStorage.getItem("token")
+      const response = await fetch(`${API_URL}/projects/${selectedProject.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      
+      if (response.ok) {
+        setIsDeleteDialogOpen(false)
+        fetchProjects()
+      } else {
+        alert("Failed to delete project")
+      }
+    } catch (error) {
+      console.error("Delete project error:", error)
+      alert("Failed to delete project")
+    }
+  }
+
+  const handleEditProject = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedProject) return
+    
+    setIsSubmitting(true)
+    try {
+      const token = localStorage.getItem("token")
+      const response = await fetch(`${API_URL}/projects/${selectedProject.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: formData.title,
+          description: formData.description,
+          abc: parseFloat(formData.abc),
+          location: formData.location,
+          deadline: formData.deadline,
+          status: selectedProject.status,
+          category: "Infrastructure"
+        })
+      })
+      
+      if (response.ok) {
+        setIsEditDialogOpen(false)
+        fetchProjects()
+      } else {
+        alert("Failed to update project")
+      }
+    } catch (error) {
+      console.error("Update project error:", error)
+      alert("Failed to update project")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const openViewDialog = (project: any) => {
+    setSelectedProject(project)
+    setIsViewDialogOpen(true)
+  }
+
+  const openEditDialog = (project: any) => {
+    setSelectedProject(project)
+    setFormData({
+      title: project.title,
+      abc: project.abc?.toString() || "",
+      location: project.location,
+      deadline: project.deadline?.split('T')[0] || "",
+      description: project.description || "",
+      requirements: []
+    })
+    setIsEditDialogOpen(true)
+  }
+
+  const openDeleteDialog = (project: any) => {
+    setSelectedProject(project)
+    setIsDeleteDialogOpen(true)
   }
 
   return (
@@ -157,7 +307,16 @@ export default function ProjectsPage() {
                 <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit">Create Project</Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    "Create Project"
+                  )}
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -213,13 +372,26 @@ export default function ProjectsPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <Button variant="ghost" size="icon">
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => openViewDialog(project)}
+                      >
                         <Eye className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="icon">
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => openEditDialog(project)}
+                      >
                         <Edit className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="text-red-600">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="text-red-600"
+                        onClick={() => openDeleteDialog(project)}
+                      >
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
@@ -230,6 +402,158 @@ export default function ProjectsPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* View Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Project Details</DialogTitle>
+            <DialogDescription>
+              Viewing details for {selectedProject?.title}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-gray-500">Title</p>
+                <p className="font-medium">{selectedProject?.title}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Budget (ABC)</p>
+                <p className="font-medium">₱{selectedProject?.abc?.toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Location</p>
+                <p className="font-medium">{selectedProject?.location}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Deadline</p>
+                <p className="font-medium">{selectedProject?.deadline}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Status</p>
+                <Badge className={selectedProject?.status === 'Open' ? 'bg-green-100 text-green-700' : selectedProject?.status === 'Evaluation' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}>
+                  {selectedProject?.status}
+                </Badge>
+              </div>
+              <div>
+                <p className="text-gray-500">Bids</p>
+                <p className="font-medium">{selectedProject?._count?.bids || 0}</p>
+              </div>
+            </div>
+            <div>
+              <p className="text-gray-500 mb-1">Description</p>
+              <p className="text-sm">{selectedProject?.description || "No description provided"}</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Project</DialogTitle>
+            <DialogDescription>
+              Edit project details
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditProject} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-title">Project Title</Label>
+              <Input
+                id="edit-title"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-abc">Budget (ABC)</Label>
+                <Input
+                  id="edit-abc"
+                  type="number"
+                  value={formData.abc}
+                  onChange={(e) => setFormData({ ...formData, abc: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-location">Location</Label>
+                <Input
+                  id="edit-location"
+                  value={formData.location}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-deadline">Deadline</Label>
+              <Input
+                id="edit-deadline"
+                type="date"
+                value={formData.deadline}
+                onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea
+                id="edit-description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                rows={3}
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Project</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <strong>{selectedProject?.title}</strong>?
+              <br /><br />
+              This action cannot be undone. All bids for this project will also be deleted.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteProject}>
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete Project
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
