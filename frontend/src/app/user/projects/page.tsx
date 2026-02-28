@@ -311,16 +311,26 @@ export default function ProjectsPage() {
                           />
                         </div>
 
-                        <div className="space-y-2">
-                          <Label>Required Documents</Label>
-                          <div className="space-y-2">
-                            {selectedProject?.requirements.map((req, index) => (
-                              <div key={index} className="flex items-center gap-2 p-2 border rounded">
-                                <FileText className="w-4 h-4 text-gray-400" />
-                                <span className="text-sm flex-1">{req}</span>
-                                <Input type="file" className="w-40 text-sm" accept=".pdf" />
-                              </div>
-                            ))}
+                        <div className="p-4 bg-blue-50 rounded-lg">
+                          <div className="flex items-start gap-3">
+                            <FileText className="w-5 h-5 text-blue-600 mt-0.5" />
+                            <div>
+                              <h4 className="font-medium text-sm text-blue-900">Documents Auto-Attached</h4>
+                              <p className="text-sm text-blue-700 mt-1">
+                                Your pre-verified documents from your profile will be automatically attached to this bid:
+                              </p>
+                              <ul className="text-sm text-blue-700 mt-2 space-y-1">
+                                {selectedProject?.requirements.map((req, index) => (
+                                  <li key={index} className="flex items-center gap-2">
+                                    <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
+                                    {req}
+                                  </li>
+                                ))}
+                              </ul>
+                              <p className="text-xs text-blue-600 mt-2">
+                                Manage your documents in <a href="/user/profile" className="underline font-medium">Profile &gt; Company Documents</a>
+                              </p>
+                            </div>
                           </div>
                         </div>
 
