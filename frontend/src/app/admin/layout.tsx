@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { Building2, LayoutDashboard, FolderPlus, BarChart3, Users, Settings, LogOut } from "lucide-react"
 
 const navItems = [
@@ -75,6 +76,7 @@ export default function AdminLayout({
               {navItems.find(item => pathname === item.href || pathname.startsWith(`${item.href}/`))?.label || "Dashboard"}
             </h1>
             <div className="flex items-center gap-4">
+              <ThemeToggle />
               <div className="text-sm text-gray-600">
                 <span className="font-medium">Admin User</span>
                 <span className="text-gray-400 mx-2">|</span>

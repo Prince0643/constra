@@ -4,6 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { Building2, LayoutDashboard, FolderSearch, Gavel, UserCircle, FileText, LogOut } from "lucide-react"
 
 const navItems = [
@@ -105,6 +106,7 @@ export default function UserLayout({
               {navItems.find(item => pathname === item.href || pathname.startsWith(`${item.href}/`))?.label || "Dashboard"}
             </h1>
             <div className="flex items-center gap-4">
+              <ThemeToggle />
               <div className="text-sm text-gray-600">
                 <span className="font-medium">ABC Construction Corp</span>
                 <span className="text-gray-400 mx-2">|</span>
