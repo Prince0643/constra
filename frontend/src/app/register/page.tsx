@@ -183,7 +183,7 @@ export default function RegisterPage() {
 
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
                   <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                  <Label className="block text-sm font-medium mb-1">Mayor's Permit</Label>
+                  <Label className="block text-sm font-medium mb-1">Mayor&apos;s Permit</Label>
                   <p className="text-xs text-gray-500 mb-2">PDF, JPG, or PNG (max 10MB)</p>
                   <Input
                     type="file"

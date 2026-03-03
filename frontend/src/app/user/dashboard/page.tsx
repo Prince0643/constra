@@ -93,7 +93,7 @@ export default function UserDashboard() {
           <Clock className="w-4 h-4 text-yellow-600" />
           <AlertTitle className="text-yellow-800">Verification Pending</AlertTitle>
           <AlertDescription className="text-yellow-700">
-            Your account is under review. You'll be able to place bids once verified.
+            Your account is under review. You&apos;ll be able to place bids once verified.
             <Link href="/user/verification" className="ml-1 underline font-medium">
               Check status
             </Link>

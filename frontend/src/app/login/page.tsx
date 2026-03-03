@@ -49,7 +49,7 @@ export default function LoginPage() {
       if (data.user.role === "Admin") {
         router.push("/admin/dashboard")
       } else {
-        router.push("/user/dashboard")
+        router.push("/constra")
       }
     } catch (err) {
       setError("Failed to connect to server. Please try again.")
@@ -117,7 +117,7 @@ export default function LoginPage() {
         </CardContent>
         <CardFooter className="flex flex-col space-y-2">
           <div className="text-sm text-center text-gray-500">
-            Don't have an account?{" "}
+            Don&apos;t have an account?{" "}
             <Link href="/register" className="text-blue-600 hover:underline">
               Register here
             </Link>

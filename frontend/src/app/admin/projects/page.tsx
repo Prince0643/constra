@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Plus, Search, FileText, Eye, Edit, Trash2, Loader2, XCircle } from "lucide-react"
+import { Plus, Search, FileText, Eye, Edit, Trash2, Loader2, XCircle, Upload, FolderOpen } from "lucide-react"
 
 const projects = [
   { id: 1, title: "Highway Expansion Project", abc: "₱50,000,000", location: "Metro Manila", status: "Open", deadline: "2024-03-15", bids: 8 },
@@ -31,10 +31,15 @@ export default function ProjectsPage() {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isViewDocsDialogOpen, setIsViewDocsDialogOpen] = useState(false)
+  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false)
+  const [projectDocuments, setProjectDocuments] = useState<any[]>([])
   const [selectedProject, setSelectedProject] = useState<any>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [projects, setProjects] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [uploadFiles, setUploadFiles] = useState<FileList | null>(null)
+  const [uploading, setUploading] = useState(false)
   const [formData, setFormData] = useState({
     title: "",
     abc: "",
@@ -192,6 +197,72 @@ export default function ProjectsPage() {
   const openDeleteDialog = (project: any) => {
     setSelectedProject(project)
     setIsDeleteDialogOpen(true)
+  }
+
+  const openUploadDialog = (project: any) => {
+    setSelectedProject(project)
+    setUploadFiles(null)
+    setIsUploadDialogOpen(true)
+  }
+
+  const openViewDocsDialog = async (project: any) => {
+    setSelectedProject(project)
+    setIsViewDocsDialogOpen(true)
+    
+    try {
+      const token = localStorage.getItem("token")
+      const response = await fetch(`${API_URL}/projects/${project.id}/documents`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setProjectDocuments(data)
+      }
+    } catch (error) {
+      console.error("Failed to fetch documents:", error)
+      setProjectDocuments([])
+    }
+  }
+
+  const handleUploadDocuments = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedProject || !uploadFiles || uploadFiles.length === 0) {
+      alert("Please select at least one file to upload")
+      return
+    }
+
+    setUploading(true)
+    try {
+      const token = localStorage.getItem("token")
+      const formData = new FormData()
+      
+      for (let i = 0; i < uploadFiles.length; i++) {
+        formData.append("documents", uploadFiles[i])
+      }
+
+      const response = await fetch(`${API_URL}/projects/${selectedProject.id}/documents`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        body: formData
+      })
+
+      if (response.ok) {
+        setIsUploadDialogOpen(false)
+        setUploadFiles(null)
+        alert("Documents uploaded successfully!")
+        fetchProjects()
+      } else {
+        const error = await response.json()
+        alert(error.error || "Failed to upload documents")
+      }
+    } catch (error) {
+      console.error("Upload error:", error)
+      alert("Failed to upload documents")
+    } finally {
+      setUploading(false)
+    }
   }
 
   return (
@@ -375,6 +446,22 @@ export default function ProjectsPage() {
                       <Button 
                         variant="ghost" 
                         size="icon"
+                        onClick={() => openUploadDialog(project)}
+                        title="Upload Documents"
+                      >
+                        <Upload className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => openViewDocsDialog(project)}
+                        title="View Documents"
+                      >
+                        <FolderOpen className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
                         onClick={() => openViewDialog(project)}
                       >
                         <Eye className="w-4 h-4" />
@@ -552,6 +639,133 @@ export default function ProjectsPage() {
               Delete Project
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Documents Dialog */}
+      <Dialog open={isViewDocsDialogOpen} onOpenChange={setIsViewDocsDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Project Documents</DialogTitle>
+            <DialogDescription>
+              Documents uploaded for <strong>{selectedProject?.title}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {projectDocuments.length === 0 ? (
+              <div className="text-center py-8">
+                <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500">No documents uploaded yet.</p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-4"
+                  onClick={() => {
+                    setIsViewDocsDialogOpen(false)
+                    openUploadDialog(selectedProject)
+                  }}
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload Documents
+                </Button>
+              </div>
+            ) : (
+              <div className="divide-y border rounded-lg">
+                {projectDocuments.map((doc, index) => (
+                  <div key={doc.id} className="flex items-center justify-between p-4 hover:bg-gray-50">
+                    <div className="flex items-center gap-3">
+                      <FileText className="w-5 h-5 text-[#002D5D]" />
+                      <div>
+                        <p className="font-medium text-gray-900">{doc.name}</p>
+                        <p className="text-xs text-gray-500">{doc.fileSize} • {doc.mimeType}</p>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="sm" className="gap-2">
+                      <Upload className="w-4 h-4 rotate-180" />
+                      Download
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsViewDocsDialogOpen(false)}>
+              Close
+            </Button>
+            {projectDocuments.length > 0 && (
+              <Button 
+                onClick={() => {
+                  setIsViewDocsDialogOpen(false)
+                  openUploadDialog(selectedProject)
+                }}
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Upload More
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upload Documents Dialog */}
+      <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Upload Project Documents</DialogTitle>
+            <DialogDescription>
+              Upload bidding documents for <strong>{selectedProject?.title}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUploadDocuments} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="documents">Select Documents</Label>
+              <Input
+                id="documents"
+                type="file"
+                multiple
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.zip"
+                onChange={(e) => setUploadFiles(e.target.files)}
+                className="cursor-pointer"
+              />
+              <p className="text-xs text-gray-500">
+                Supported formats: PDF, Word, Excel, ZIP. Max 10MB per file.
+              </p>
+              {uploadFiles && uploadFiles.length > 0 && (
+                <div className="bg-blue-50 p-3 rounded-lg">
+                  <p className="text-sm font-medium text-[#002D5D]">
+                    {uploadFiles.length} file(s) selected:
+                  </p>
+                  <ul className="text-sm text-gray-600 mt-1">
+                    {Array.from(uploadFiles).map((file, index) => (
+                      <li key={index} className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-gray-400" />
+                        {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsUploadDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={uploading || !uploadFiles || uploadFiles.length === 0}>
+                {uploading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload Documents
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

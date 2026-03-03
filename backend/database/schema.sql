@@ -37,11 +37,31 @@ CREATE TABLE IF NOT EXISTS `projects` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `title` VARCHAR(255) NOT NULL,
   `description` TEXT,
+  `referenceNumber` VARCHAR(100),
+  `solicitationNumber` VARCHAR(100),
+  `procuringEntity` VARCHAR(255),
+  `clientAgency` VARCHAR(255),
+  `areaOfDelivery` VARCHAR(255),
+  `tradeAgreement` VARCHAR(255),
+  `procurementMode` VARCHAR(100),
+  `classification` VARCHAR(100),
   `abc` DECIMAL(15, 2) NOT NULL,
   `location` VARCHAR(255),
+  `deliveryPeriod` VARCHAR(100),
   `deadline` DATETIME,
+  `closingTime` VARCHAR(20),
+  `preBidDate` DATE,
+  `preBidTime` VARCHAR(20),
+  `siteInspectionDate` DATE,
+  `siteInspectionTime` VARCHAR(20),
   `status` ENUM('Open', 'Closed', 'Draft') DEFAULT 'Open',
   `category` VARCHAR(100),
+  `createdBy` VARCHAR(255),
+  `contactName` VARCHAR(255),
+  `contactPosition` VARCHAR(255),
+  `contactAddress` TEXT,
+  `contactPhone` VARCHAR(50),
+  `contactEmail` VARCHAR(255),
   `createdAt` DATETIME DEFAULT CURRENT_TIMESTAMP,
   `updatedAt` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -68,6 +88,19 @@ CREATE TABLE IF NOT EXISTS `bids` (
   `projectId` INT NOT NULL,
   FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE,
   FOREIGN KEY (`projectId`) REFERENCES `projects`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Notifications Table
+CREATE TABLE IF NOT EXISTS `notifications` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `userId` INT,
+  `type` VARCHAR(50) NOT NULL,
+  `title` VARCHAR(255) NOT NULL,
+  `message` TEXT NOT NULL,
+  `link` VARCHAR(500),
+  `isRead` BOOLEAN DEFAULT FALSE,
+  `createdAt` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Indexes for better performance
