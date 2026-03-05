@@ -2,9 +2,10 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Building2, Bell, User, Search, LogOut, Clock } from "lucide-react"
+import { Building2, Bell, User, Search, LogOut, Clock, ChevronDown } from "lucide-react"
 import { NotificationBell } from "@/components/notification-bell"
 
 const mainNavItems = [
@@ -17,23 +18,35 @@ const mainNavItems = [
 ]
 
 const subNavConfig: Record<string, { href: string; label: string }[]> = {
-  "/constra": [],
   "/constra/organization": [
-    { href: "/constra/organization", label: "Information" },
-    { href: "/constra/organization/documents", label: "Documents" },
-    { href: "/constra/organization/users", label: "Users" },
+    { href: "/constra/organization/sub-organizations", label: "Sub-organization List" },
+    { href: "/constra/organization/contacts", label: "Organization Contact List" },
+    { href: "/constra/organization/certificates", label: "View Certificate" },
+    { href: "/constra/organization/history", label: "View History" },
+    { href: "/constra/organization/bank-account", label: "Bank Account" },
   ],
+  "/constra": [],
   "/constra/profile": [
     { href: "/constra/profile", label: "Own Profile" },
-    { href: "/constra/profile/reset-password", label: "Reset Passphrase" },
+    { href: "/constra/profile/reset-passphrase", label: "Reset Passphrase" },
+    { href: "/constra/profile/change-password", label: "Change Password" },
     { href: "/constra/profile/activity", label: "Activity" },
     { href: "/constra/profile/bid-matching", label: "Bid Matching" },
   ],
-  "/constra/opportunities": [
-    { href: "/constra/opportunities", label: "Search" },
-    { href: "/constra/opportunities/detailed-search", label: "Detailed Search" },
-    { href: "/constra/opportunities/category", label: "By Category" },
-    { href: "/constra/opportunities/agency", label: "By Agency" },
+  "/constra/opportunities/open": [
+    { href: "/constra/opportunities/open", label: "Search" },
+    { href: "/constra/opportunities/open/detailed-search", label: "Detailed Search" },
+    { href: "/constra/opportunities/open/category", label: "View by Category" },
+    { href: "/constra/opportunities/open/agency", label: "View by Agency" },
+  ],
+  "/constra/opportunities/former": [
+    { href: "/constra/opportunities/former", label: "Search" },
+    { href: "/constra/opportunities/former/detailed-search", label: "Detailed Search" },
+    { href: "/constra/opportunities/former/category", label: "View by Category" },
+    { href: "/constra/opportunities/former/agency", label: "View by Agency" },
+  ],
+  "/constra/opportunities/awards": [
+    { href: "/constra/opportunities/awards", label: "Awards Notices" },
   ],
   "/constra/directory": [
     { href: "/constra/directory", label: "Buyers" },
@@ -54,6 +67,9 @@ export default function ConstraLayout({
 }) {
   const pathname = usePathname()
   const router = useRouter()
+  const [myConstraOpen, setMyConstraOpen] = useState(false)
+  const [myOrganizationOpen, setMyOrganizationOpen] = useState(false)
+  const [opportunitiesOpen, setOpportunitiesOpen] = useState(false)
   
   const handleSignOut = () => {
     localStorage.removeItem("token")
@@ -72,10 +88,10 @@ export default function ConstraLayout({
     hour12: true,
   })
 
-  // Determine active section for sub-nav
-  const activeSection = Object.keys(subNavConfig).find((key) =>
-    pathname === key || pathname.startsWith(`${key}/`)
-  ) || "/constra"
+  // Determine active section for sub-nav - sort by longest key first to match specific paths
+  const activeSection = Object.keys(subNavConfig)
+    .sort((a, b) => b.length - a.length)
+    .find((key) => pathname === key || pathname.startsWith(`${key}/`)) || "/constra"
   const subNavItems = subNavConfig[activeSection] || []
 
   return (
@@ -120,6 +136,207 @@ export default function ConstraLayout({
           <nav className="flex px-4">
             {mainNavItems.map((item) => {
               const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+              
+              // Special handling for My Constra with dropdown
+              if (item.href === "/constra") {
+                return (
+                  <div
+                    key={item.href}
+                    className="relative"
+                    onMouseEnter={() => setMyConstraOpen(true)}
+                    onMouseLeave={() => setMyConstraOpen(false)}
+                  >
+                    <Link
+                      href={item.href}
+                      className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 flex items-center gap-1 ${
+                        isActive
+                          ? "text-white border-white bg-blue-800"
+                          : "text-blue-200 border-transparent hover:text-white hover:bg-blue-800/50"
+                      }`}
+                    >
+                      {item.label}
+                      <ChevronDown className={`w-4 h-4 transition-transform ${myConstraOpen ? 'rotate-180' : ''}`} />
+                    </Link>
+                    
+                    {/* Dropdown Menu */}
+                    {myConstraOpen && (
+                      <div className="absolute top-full left-0 bg-white shadow-lg border border-gray-200 rounded-b-lg min-w-[180px] z-50">
+                        <Link
+                          href="/constra/pending-task"
+                          className={`block px-4 py-3 text-sm hover:bg-gray-50 ${
+                            pathname === "/constra/pending-task" 
+                              ? "text-[#002D5D] font-medium bg-blue-50" 
+                              : "text-gray-700"
+                          }`}
+                        >
+                          Pending Task
+                        </Link>
+                        <Link
+                          href="/constra/my-opportunities"
+                          className={`block px-4 py-3 text-sm hover:bg-gray-50 ${
+                            pathname === "/constra/my-opportunities" 
+                              ? "text-[#002D5D] font-medium bg-blue-50" 
+                              : "text-gray-700"
+                          }`}
+                        >
+                          My Opportunities
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                )
+              }
+              
+              // Special handling for My Organization with dropdown
+              if (item.href === "/constra/organization") {
+                return (
+                  <div
+                    key={item.href}
+                    className="relative"
+                    onMouseEnter={() => setMyOrganizationOpen(true)}
+                    onMouseLeave={() => setMyOrganizationOpen(false)}
+                  >
+                    <Link
+                      href={item.href}
+                      className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 flex items-center gap-1 ${
+                        isActive
+                          ? "text-white border-white bg-blue-800"
+                          : "text-blue-200 border-transparent hover:text-white hover:bg-blue-800/50"
+                      }`}
+                    >
+                      {item.label}
+                      <ChevronDown className={`w-4 h-4 transition-transform ${myOrganizationOpen ? 'rotate-180' : ''}`} />
+                    </Link>
+                    
+                    {/* Dropdown Menu - 6 items */}
+                    {myOrganizationOpen && (
+                      <div className="absolute top-full left-0 bg-white shadow-lg border border-gray-200 rounded-b-lg min-w-[200px] z-50">
+                        <Link
+                          href="/constra/organization"
+                          className={`block px-4 py-3 text-sm hover:bg-gray-50 ${
+                            pathname === "/constra/organization" 
+                              ? "text-[#002D5D] font-medium bg-blue-50" 
+                              : "text-gray-700"
+                          }`}
+                        >
+                          Organization Profile
+                        </Link>
+                        <Link
+                          href="/constra/organization/documents"
+                          className={`block px-4 py-3 text-sm hover:bg-gray-50 ${
+                            pathname === "/constra/organization/documents" 
+                              ? "text-[#002D5D] font-medium bg-blue-50" 
+                              : "text-gray-700"
+                          }`}
+                        >
+                          Document Library
+                        </Link>
+                        <Link
+                          href="/constra/organization/projects"
+                          className={`block px-4 py-3 text-sm hover:bg-gray-50 ${
+                            pathname === "/constra/organization/projects" 
+                              ? "text-[#002D5D] font-medium bg-blue-50" 
+                              : "text-gray-700"
+                          }`}
+                        >
+                          Ongoing/Completed Project
+                        </Link>
+                        <Link
+                          href="/constra/organization/consultant"
+                          className={`block px-4 py-3 text-sm hover:bg-gray-50 ${
+                            pathname === "/constra/organization/consultant" 
+                              ? "text-[#002D5D] font-medium bg-blue-50" 
+                              : "text-gray-700"
+                          }`}
+                        >
+                          Consultant
+                        </Link>
+                        <Link
+                          href="/constra/organization/activity"
+                          className={`block px-4 py-3 text-sm hover:bg-gray-50 ${
+                            pathname === "/constra/organization/activity" 
+                              ? "text-[#002D5D] font-medium bg-blue-50" 
+                              : "text-gray-700"
+                          }`}
+                        >
+                          Activity
+                        </Link>
+                        <Link
+                          href="/constra/organization/products"
+                          className={`block px-4 py-3 text-sm hover:bg-gray-50 ${
+                            pathname === "/constra/organization/products" 
+                              ? "text-[#002D5D] font-medium bg-blue-50" 
+                              : "text-gray-700"
+                          }`}
+                        >
+                          Product/Service Listing
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                )
+              }
+              
+              // Special handling for Opportunities with dropdown
+              if (item.href === "/constra/opportunities") {
+                return (
+                  <div
+                    key={item.href}
+                    className="relative"
+                    onMouseEnter={() => setOpportunitiesOpen(true)}
+                    onMouseLeave={() => setOpportunitiesOpen(false)}
+                  >
+                    <Link
+                      href={item.href}
+                      className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 flex items-center gap-1 ${
+                        isActive
+                          ? "text-white border-white bg-blue-800"
+                          : "text-blue-200 border-transparent hover:text-white hover:bg-blue-800/50"
+                      }`}
+                    >
+                      {item.label}
+                      <ChevronDown className={`w-4 h-4 transition-transform ${opportunitiesOpen ? 'rotate-180' : ''}`} />
+                    </Link>
+                    
+                    {/* Dropdown Menu - 3 items */}
+                    {opportunitiesOpen && (
+                      <div className="absolute top-full left-0 bg-white shadow-lg border border-gray-200 rounded-b-lg min-w-[200px] z-50">
+                        <Link
+                          href="/constra/opportunities/open"
+                          className={`block px-4 py-3 text-sm hover:bg-gray-50 ${
+                            pathname === "/constra/opportunities/open" || pathname.startsWith("/constra/opportunities/open")
+                              ? "text-[#002D5D] font-medium bg-blue-50" 
+                              : "text-gray-700"
+                          }`}
+                        >
+                          Open Opportunities
+                        </Link>
+                        <Link
+                          href="/constra/opportunities/former"
+                          className={`block px-4 py-3 text-sm hover:bg-gray-50 ${
+                            pathname === "/constra/opportunities/former" || pathname.startsWith("/constra/opportunities/former")
+                              ? "text-[#002D5D] font-medium bg-blue-50" 
+                              : "text-gray-700"
+                          }`}
+                        >
+                          Former Opportunities
+                        </Link>
+                        <Link
+                          href="/constra/opportunities/awards"
+                          className={`block px-4 py-3 text-sm hover:bg-gray-50 ${
+                            pathname === "/constra/opportunities/awards" || pathname.startsWith("/constra/opportunities/awards")
+                              ? "text-[#002D5D] font-medium bg-blue-50" 
+                              : "text-gray-700"
+                          }`}
+                        >
+                          Awards Notices
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                )
+              }
+              
               return (
                 <Link
                   key={item.href}
@@ -141,14 +358,14 @@ export default function ConstraLayout({
       {/* Sub Navigation Bar */}
       <div className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4">
-          <nav className="flex">
+          <nav className="flex overflow-x-auto scrollbar-hide">
             {subNavItems.map((item) => {
               const isActive = pathname === item.href
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`px-4 py-2.5 text-sm transition-colors border-b-2 ${
+                  className={`px-4 py-2.5 text-sm transition-colors border-b-2 whitespace-nowrap ${
                     isActive
                       ? "text-[#002D5D] border-[#002D5D] font-medium"
                       : "text-gray-600 border-transparent hover:text-[#002D5D] hover:border-gray-300"
