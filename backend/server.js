@@ -352,10 +352,10 @@ app.post('/api/projects', authenticateToken, requireAdmin, async (req, res) => {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         title, description, abc, location, deadline, status || 'Open', category,
-        referenceNumber, solicitationNumber, procuringEntity, clientAgency, areaOfDelivery,
-        tradeAgreement, procurementMode, classification, deliveryPeriod,
-        closingTime, preBidDate, preBidTime, siteInspectionDate, siteInspectionTime,
-        contactName, contactPosition, contactAddress, contactPhone, contactEmail,
+        referenceNumber || null, solicitationNumber || null, procuringEntity || null, clientAgency || null, areaOfDelivery || null,
+        tradeAgreement || null, procurementMode || null, classification || null, deliveryPeriod || null,
+        closingTime || null, preBidDate || null, preBidTime || null, siteInspectionDate || null, siteInspectionTime || null,
+        contactName || null, contactPosition || null, contactAddress || null, contactPhone || null, contactEmail || null,
         req.user.email
       ]
     );
