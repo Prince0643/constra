@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Search, FileText, Eye, Edit, Trash2, Loader2, XCircle, Upload, FolderOpen } from "lucide-react"
 
 const projects = [
@@ -24,6 +25,24 @@ const requirementTemplates = [
   { name: "Technical Specifications", description: "Detailed project specs", required: true },
   { name: "Company Profile", description: "Company background and experience", required: false },
   { name: "Certificate of PhilGEPS Registration", description: "Valid PhilGEPS registration", required: true },
+]
+
+const projectCategories = [
+  "Education",
+  "Infrastructure",
+  "House Repair",
+  "Health",
+  "Agriculture",
+  "Transportation",
+  "Water & Sanitation",
+  "Energy",
+  "Technology",
+  "Environment",
+  "Social Services",
+  "Public Safety",
+  "Sports & Recreation",
+  "Tourism",
+  "Others"
 ]
 
 export default function ProjectsPage() {
@@ -46,6 +65,7 @@ export default function ProjectsPage() {
     location: "",
     deadline: "",
     description: "",
+    category: "Infrastructure",
     requirements: [] as string[],
   })
 
@@ -95,14 +115,14 @@ export default function ProjectsPage() {
           abc: parseFloat(formData.abc),
           location: formData.location,
           deadline: formData.deadline,
-          category: "Infrastructure",
+          category: formData.category,
           requirements
         })
       })
       
       if (response.ok) {
         setIsCreateDialogOpen(false)
-        setFormData({ title: "", abc: "", location: "", deadline: "", description: "", requirements: [] })
+        setFormData({ title: "", abc: "", location: "", deadline: "", description: "", category: "Infrastructure", requirements: [] })
         fetchProjects() // Refresh the list
       } else {
         const error = await response.json()
@@ -158,7 +178,7 @@ export default function ProjectsPage() {
           location: formData.location,
           deadline: formData.deadline,
           status: selectedProject.status,
-          category: "Infrastructure"
+          category: formData.category
         })
       })
       
@@ -189,6 +209,7 @@ export default function ProjectsPage() {
       location: project.location,
       deadline: project.deadline?.split('T')[0] || "",
       description: project.description || "",
+      category: project.category || "Infrastructure",
       requirements: []
     })
     setIsEditDialogOpen(true)
@@ -330,6 +351,22 @@ export default function ProjectsPage() {
                     onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
                     required
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="category">Category</Label>
+                  <Select
+                    value={formData.category}
+                    onValueChange={(value) => setFormData({ ...formData, category: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {projectCategories.map((cat) => (
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div className="space-y-2">
@@ -590,6 +627,22 @@ export default function ProjectsPage() {
                 onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
                 required
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-category">Category</Label>
+              <Select
+                value={formData.category}
+                onValueChange={(value) => setFormData({ ...formData, category: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {projectCategories.map((cat) => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-description">Description</Label>
