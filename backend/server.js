@@ -351,7 +351,7 @@ app.post('/api/projects', authenticateToken, requireAdmin, async (req, res) => {
         createdBy
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        title, description, abc, location, deadline, status || 'Open', category,
+        title, description, abc, location, deadline, status || 'Open', category || null,
         referenceNumber || null, solicitationNumber || null, procuringEntity || null, clientAgency || null, areaOfDelivery || null,
         tradeAgreement || null, procurementMode || null, classification || null, deliveryPeriod || null,
         closingTime || null, preBidDate || null, preBidTime || null, siteInspectionDate || null, siteInspectionTime || null,
