@@ -349,7 +349,7 @@ app.post('/api/projects', authenticateToken, requireAdmin, async (req, res) => {
         closingTime, preBidDate, preBidTime, siteInspectionDate, siteInspectionTime,
         contactName, contactPosition, contactAddress, contactPhone, contactEmail,
         createdBy
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         title, description, abc, location, deadline, status || 'Open', category || null,
         referenceNumber || null, solicitationNumber || null, procuringEntity || null, clientAgency || null, areaOfDelivery || null,
