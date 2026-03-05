@@ -29,6 +29,9 @@ import {
   Loader2
 } from "lucide-react"
 
+// Force dynamic rendering to avoid useSearchParams static generation issues
+export const dynamic = 'force-dynamic'
+
 interface ProjectFormData {
   // Basic Info
   title: string
