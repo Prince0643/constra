@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -122,7 +122,7 @@ const tradeAgreements = [
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"
 
-export default function BidNoticeEditorPage() {
+function BidNoticeEditorContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const editId = searchParams.get("edit")
@@ -678,5 +678,14 @@ export default function BidNoticeEditorPage() {
         </TabsContent>
       </Tabs>
     </div>
+  )
+}
+
+// Wrapper with Suspense for useSearchParams
+export default function BidNoticeEditorPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center">Loading...</div>}>
+      <BidNoticeEditorContent />
+    </Suspense>
   )
 }
