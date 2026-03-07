@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -38,10 +38,12 @@ interface Opportunity {
   abc: number
   category: string
   deadline: string
-  status: "Draft" | "Published" | "Closed" | "Awarded"
+  status: "Draft" | "Open" | "Closed" | "Awarded"
   bids: number
   agency: string
 }
+
+const API_URL = '/api'
 
 const categories = [
   "Civil Works",
@@ -63,43 +65,15 @@ const agencies = [
   "City of Manila",
 ]
 
-const opportunities: Opportunity[] = [
-  {
-    id: "ITB-2026-001",
-    title: "Construction of 2-Storey School Building",
-    abc: 12500000,
-    category: "Civil Works",
-    deadline: "2026-03-30",
-    status: "Published",
-    bids: 8,
-    agency: "DepEd - Department of Education"
-  },
-  {
-    id: "ITB-2026-002",
-    title: "Road Improvement and Asphalting Project",
-    abc: 45600000,
-    category: "Infrastructure",
-    deadline: "2026-04-15",
-    status: "Published",
-    bids: 12,
-    agency: "DPWH - Department of Public Works"
-  },
-  {
-    id: "ITB-2026-003",
-    title: "Supply of Medical Equipment",
-    abc: 8500000,
-    category: "IT Equipment",
-    deadline: "2026-03-20",
-    status: "Draft",
-    bids: 0,
-    agency: "DOH - Department of Health"
-  },
-]
-
 export default function OpportunitiesPage() {
+  const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [step, setStep] = useState(1)
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [publishingId, setPublishingId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -110,6 +84,77 @@ export default function OpportunitiesPage() {
     location: "",
     eligibility: ""
   })
+
+  // Fetch opportunities from API
+  useEffect(() => {
+    fetchOpportunities()
+  }, [])
+
+  const fetchOpportunities = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        setError('Please log in')
+        setLoading(false)
+        return
+      }
+
+      const res = await fetch(`${API_URL}/projects`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+
+      if (!res.ok) throw new Error('Failed to fetch opportunities')
+
+      const data = await res.json()
+      // Transform API data to match our interface
+      const transformed: Opportunity[] = data.map((p: any) => ({
+        id: p.id.toString(),
+        title: p.title,
+        abc: parseFloat(p.abc) || 0,
+        category: p.category || 'Uncategorized',
+        deadline: p.deadline ? p.deadline.split('T')[0] : '',
+        status: p.status === 'Open' ? 'Open' : p.status === 'Draft' ? 'Draft' : p.status === 'Closed' ? 'Closed' : 'Awarded',
+        bids: p._count?.bids || 0,
+        agency: p.procuringEntity || 'Unknown Agency'
+      }))
+      setOpportunities(transformed)
+    } catch (err: any) {
+      setError(err.message || 'Failed to load opportunities')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handlePublish = async (oppId: string) => {
+    try {
+      setPublishingId(oppId)
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const res = await fetch(`${API_URL}/projects/${oppId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: 'Open' })
+      })
+
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Failed to publish opportunity')
+      }
+
+      // Update local state
+      setOpportunities(prev => prev.map(o => 
+        o.id === oppId ? { ...o, status: "Open" as const } : o
+      ))
+    } catch (err: any) {
+      setError(err.message || 'Failed to publish opportunity')
+    } finally {
+      setPublishingId(null)
+    }
+  }
 
   const filteredOpportunities = opportunities.filter((o) =>
     o.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -122,6 +167,14 @@ export default function OpportunitiesPage() {
 
   const handleNext = () => setStep((s) => Math.min(3, s + 1))
   const handleBack = () => setStep((s) => Math.max(1, s - 1))
+
+  if (loading) {
+    return <div className="p-6">Loading opportunities...</div>
+  }
+
+  if (error) {
+    return <div className="p-6 text-red-600">Error: {error}</div>
+  }
 
   return (
     <div className="space-y-6">
@@ -147,7 +200,7 @@ export default function OpportunitiesPage() {
           <CardContent className="p-4">
             <p className="text-sm text-gray-600">Active ITBs</p>
             <p className="text-2xl font-bold text-[#002D5D]">
-              {opportunities.filter((o) => o.status === "Published").length}
+              {opportunities.filter((o) => o.status === "Open").length}
             </p>
           </CardContent>
         </Card>
@@ -244,17 +297,17 @@ export default function OpportunitiesPage() {
                     </td>
                     <td className="p-4 text-center">
                       <Badge className={
-                        opp.status === "Published" ? "bg-green-100 text-green-700" :
+                        opp.status === "Open" ? "bg-green-100 text-green-700" :
                         opp.status === "Draft" ? "bg-orange-100 text-orange-700" :
                         opp.status === "Awarded" ? "bg-blue-100 text-blue-700" :
                         "bg-gray-100 text-gray-700"
                       }>
-                        {opp.status}
+                        {opp.status === "Open" ? "Published" : opp.status}
                       </Badge>
                     </td>
                     <td className="p-4">
                       <div className="flex items-center justify-center gap-1">
-                        <Link href={`/constra/opportunities/${opp.id}`} target="_blank">
+                        <Link href={`/admin/opportunities/${opp.id}`}>
                           <Button variant="ghost" size="sm" className="gap-1">
                             <Eye className="w-4 h-4" />
                             View
@@ -267,8 +320,13 @@ export default function OpportunitiesPage() {
                           </Button>
                         </Link>
                         {opp.status === "Draft" && (
-                          <Button size="sm" className="bg-[#002D5D]">
-                            Publish
+                          <Button 
+                            size="sm" 
+                            className="bg-[#002D5D]"
+                            onClick={() => handlePublish(opp.id)}
+                            disabled={publishingId === opp.id}
+                          >
+                            {publishingId === opp.id ? 'Publishing...' : 'Publish'}
                           </Button>
                         )}
                       </div>

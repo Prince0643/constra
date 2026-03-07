@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -28,6 +29,8 @@ const navItems = [
   { href: "/admin/settings", label: "System Settings", icon: Settings },
 ]
 
+const API_URL = "/api"
+
 export default function AdminLayout({
   children,
 }: {
@@ -35,7 +38,42 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname()
   const router = useRouter()
+  const [pendingMerchants, setPendingMerchants] = useState(0)
+  const [pendingBids, setPendingBids] = useState(0)
   
+  useEffect(() => {
+    fetchPendingCounts()
+  }, [pathname])
+  
+  const fetchPendingCounts = async () => {
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) return
+      
+      // Fetch pending merchants count
+      const merchantsRes = await fetch(`${API_URL}/merchants`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (merchantsRes.ok) {
+        const merchants = await merchantsRes.json()
+        const pending = merchants.filter((m: any) => m.status === "Pending" || m.verificationStatus === "Pending").length
+        setPendingMerchants(pending)
+      }
+      
+      // Fetch pending bids count
+      const bidsRes = await fetch(`${API_URL}/bids`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (bidsRes.ok) {
+        const bids = await bidsRes.json()
+        const pending = bids.filter((b: any) => b.bidStatus === "Submitted" || b.bidStatus === "Under Evaluation").length
+        setPendingBids(pending)
+      }
+    } catch (error) {
+      console.error("Failed to fetch pending counts:", error)
+    }
+  }
+
   const handleSignOut = () => {
     localStorage.removeItem("token")
     localStorage.removeItem("user")
@@ -75,8 +113,11 @@ export default function AdminLayout({
                 >
                   <Icon className="w-5 h-5" />
                   {item.label}
-                  {item.href === "/admin/merchants" && (
-                    <Badge className="ml-auto bg-red-500 text-white text-xs">12</Badge>
+                  {item.href === "/admin/merchants" && pendingMerchants > 0 && (
+                    <Badge className="ml-auto bg-red-500 text-white text-xs">{pendingMerchants}</Badge>
+                  )}
+                  {item.href === "/admin/bids" && pendingBids > 0 && (
+                    <Badge className="ml-auto bg-blue-500 text-white text-xs">{pendingBids}</Badge>
                   )}
                 </Link>
               )

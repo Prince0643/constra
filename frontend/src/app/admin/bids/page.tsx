@@ -16,9 +16,10 @@ export default function AllBidsPage() {
   const [selectedBid, setSelectedBid] = useState<any>(null)
   const [isAwardDialogOpen, setIsAwardDialogOpen] = useState(false)
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false)
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"
+  const API_URL = "/api"
 
   useEffect(() => {
     fetchData()
@@ -239,7 +240,14 @@ export default function AllBidsPage() {
                             </Button>
                           </>
                         )}
-                        <Button variant="ghost" size="icon">
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => {
+                            setSelectedBid(bid)
+                            setIsViewDialogOpen(true)
+                          }}
+                        >
                           <Eye className="w-4 h-4" />
                         </Button>
                       </div>
@@ -359,6 +367,60 @@ export default function AllBidsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* View Bid Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="w-5 h-5" />
+              Bid Details
+            </DialogTitle>
+          </DialogHeader>
+          {selectedBid && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-500">Project</p>
+                  <p className="font-medium">{selectedBid.projectTitle}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Bidder</p>
+                  <p className="font-medium">{selectedBid.companyName}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Bid Amount</p>
+                  <p className="font-semibold text-lg text-[#002D5D]">{formatCurrency(selectedBid.bidAmount)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Submitted</p>
+                  <p className="font-medium">{selectedBid.submittedAt?.split('T')[0]}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Status</p>
+                  <p className="font-medium">{getStatusBadge(selectedBid.bidStatus)}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Compliance</p>
+                  <p className="font-medium">{selectedBid.complianceStatus || 'N/A'}</p>
+                </div>
+              </div>
+              {selectedBid.notes && (
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-sm text-gray-500 mb-1">Bidder Notes</p>
+                  <p className="text-sm">{selectedBid.notes}</p>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setIsViewDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   )
 }

@@ -42,6 +42,7 @@ interface Project {
   status: "Open" | "Closed" | "Draft"
   category: string
   createdAt?: string
+  updatedAt?: string
   requirements?: any[]
   bids?: any[]
   createdBy?: string
@@ -339,59 +340,107 @@ export default function BidNoticeDetailPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Left Column */}
-                  <div className="space-y-5">
-                    <div>
-                      <p className="text-sm text-gray-500 mb-1 flex items-center gap-2">
-                        <Tag className="w-4 h-4" />
-                        Solicitation Number
-                      </p>
-                      <p className="font-semibold text-gray-900 font-mono">{project.solicitationNumber}</p>
-                    </div>
-
-                    <div>
-                      <p className="text-sm text-gray-500 mb-1 flex items-center gap-2">
-                        <DollarSign className="w-4 h-4" />
-                        Approved Budget for the Contract (ABC)
-                      </p>
-                      <p className="font-semibold text-[#002D5D] text-lg">{formatCurrency(project.abc)}</p>
-                    </div>
-
-                    <div>
-                      <p className="text-sm text-gray-500 mb-1 flex items-center gap-2">
-                        <MapPin className="w-4 h-4" />
-                        Project Location
-                      </p>
-                      <p className="font-medium text-gray-900">{project.location}</p>
-                    </div>
+                {/* Top Details Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1 flex items-center gap-2">
+                      <Tag className="w-4 h-4" />
+                      Reference Number
+                    </p>
+                    <p className="font-semibold text-gray-900 font-mono">{project.referenceNumber || "N/A"}</p>
                   </div>
 
-                  {/* Right Column */}
-                  <div className="space-y-5">
-                    <div>
-                      <p className="text-sm text-gray-500 mb-1 flex items-center gap-2">
-                        <FileText className="w-4 h-4" />
-                        Procurement Mode
-                      </p>
-                      <p className="font-semibold text-gray-900">{project.procurementMode}</p>
-                    </div>
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1 flex items-center gap-2">
+                      <Tag className="w-4 h-4" />
+                      Solicitation Number
+                    </p>
+                    <p className="font-semibold text-gray-900 font-mono">{project.solicitationNumber || "N/A"}</p>
+                  </div>
 
-                    <div>
-                      <p className="text-sm text-gray-500 mb-1 flex items-center gap-2">
-                        <Tag className="w-4 h-4" />
-                        Category / Sector
-                      </p>
-                      <Badge className="bg-blue-100 text-blue-700">{project.category}</Badge>
-                    </div>
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1 flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      Trade Agreement
+                    </p>
+                    <p className="font-semibold text-gray-900">{project.tradeAgreement || "Implementing Rules and Regulations"}</p>
+                  </div>
+                </div>
 
-                    <div>
-                      <p className="text-sm text-gray-500 mb-1 flex items-center gap-2">
-                        <Calendar className="w-4 h-4" />
-                        Date Posted
-                      </p>
-                      <p className="font-medium text-gray-900">{project.postingDate}</p>
-                    </div>
+                {/* Second Row */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1 flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      Procurement Mode
+                    </p>
+                    <p className="font-semibold text-gray-900">{project.procurementMode || "Negotiated Procurement - Two Failed Biddings"}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1 flex items-center gap-2">
+                      <Tag className="w-4 h-4" />
+                      Classification
+                    </p>
+                    <p className="font-semibold text-gray-900">{project.classification || "Goods"}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1 flex items-center gap-2">
+                      <Tag className="w-4 h-4" />
+                      Category
+                    </p>
+                    <Badge className="bg-blue-100 text-blue-700">{project.category || "Food Stuff"}</Badge>
+                  </div>
+                </div>
+
+                <Separator className="my-6" />
+
+                {/* ABC and Budget */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1 flex items-center gap-2">
+                      <DollarSign className="w-4 h-4" />
+                      Approved Budget for the Contract (ABC)
+                    </p>
+                    <p className="font-semibold text-[#002D5D] text-lg">{formatCurrency(project.abc)}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1 flex items-center gap-2">
+                      <Calendar className="w-4 h-4" />
+                      Delivery Period
+                    </p>
+                    <p className="font-medium text-gray-900">{project.deliveryPeriod || "1 Day/s"}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1 flex items-center gap-2">
+                      <Building2 className="w-4 h-4" />
+                      Client Agency
+                    </p>
+                    <p className="font-medium text-gray-900">{project.clientAgency || project.procuringEntity || "N/A"}</p>
+                  </div>
+                </div>
+
+                <Separator className="my-6" />
+
+                {/* Location & Area */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1 flex items-center gap-2">
+                      <MapPin className="w-4 h-4" />
+                      Project Location
+                    </p>
+                    <p className="font-medium text-gray-900">{project.location || "N/A"}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1 flex items-center gap-2">
+                      <MapPin className="w-4 h-4" />
+                      Area of Delivery
+                    </p>
+                    <p className="font-medium text-gray-900">{project.areaOfDelivery || project.location || "N/A"}</p>
                   </div>
                 </div>
 
@@ -403,27 +452,97 @@ export default function BidNoticeDetailPage() {
                     <FileText className="w-4 h-4" />
                     Project Description / Scope of Work
                   </p>
-                  <p className="text-gray-700 leading-relaxed">{project.description}</p>
+                  <p className="text-gray-700 leading-relaxed">{project.description || "No description available"}</p>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Important Dates */}
+            {/* Important Dates & Status */}
             <Card>
               <CardHeader className="border-b bg-gray-50/50">
                 <CardTitle className="text-lg text-[#002D5D] flex items-center gap-2">
                   <Clock className="w-5 h-5" />
-                  Important Dates
+                  Important Dates & Status
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6">
+                {/* Status & Stats Row */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <span className="font-medium text-green-700">Status</span>
+                    </div>
+                    <Badge className="bg-green-100 text-green-700">{project.status || "Active"}</Badge>
+                  </div>
+
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                    <div className="flex items-center gap-2 mb-2">
+                      <FileText className="w-5 h-5 text-[#002D5D]" />
+                      <span className="font-medium text-[#002D5D]">Bid Supplements</span>
+                    </div>
+                    <p className="text-2xl font-bold text-[#002D5D]">0</p>
+                  </div>
+
+                  <div className="bg-purple-50 p-4 rounded-lg border border-purple-100">
+                    <div className="flex items-center gap-2 mb-2">
+                      <ExternalLink className="w-5 h-5 text-purple-600" />
+                      <span className="font-medium text-purple-700">Associated Components</span>
+                    </div>
+                    <p className="text-2xl font-bold text-purple-700">0</p>
+                  </div>
+
+                  <div className="bg-orange-50 p-4 rounded-lg border border-orange-100">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Download className="w-5 h-5 text-orange-600" />
+                      <span className="font-medium text-orange-600">Document Request List</span>
+                    </div>
+                    <p className="text-2xl font-bold text-orange-600">0</p>
+                  </div>
+                </div>
+
+                <Separator className="my-6" />
+
+                {/* Dates Row */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Calendar className="w-5 h-5 text-[#002D5D]" />
+                      <span className="font-medium text-[#002D5D]">Date Published</span>
+                    </div>
+                    <p className="text-gray-700">{formatDate(project.postingDate || project.createdAt || "")}</p>
+                  </div>
+
+                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Clock className="w-5 h-5 text-gray-600" />
+                      <span className="font-medium text-gray-700">Last Updated / Time</span>
+                    </div>
+                    <p className="text-gray-700">{project.updatedAt ? formatDate(project.updatedAt) : formatDate(new Date().toISOString())}</p>
+                  </div>
+
+                  <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertCircle className="w-5 h-5 text-red-600" />
+                      <span className="font-medium text-red-700">Closing Date / Time</span>
+                    </div>
+                    <p className="text-gray-700">{project.deadline ? formatDate(project.deadline) : "N/A"}</p>
+                    {project.closingTime && (
+                      <p className="text-sm text-gray-500">{project.closingTime}</p>
+                    )}
+                  </div>
+                </div>
+
+                <Separator className="my-6" />
+
+                {/* Timeline Row */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
                     <div className="flex items-center gap-2 mb-2">
                       <Calendar className="w-5 h-5 text-[#002D5D]" />
                       <span className="font-medium text-[#002D5D]">Pre-Bid Conference</span>
                     </div>
-                    <p className="text-gray-700">{project.preBidDate || "TBD"}</p>
+                    <p className="text-gray-700">{project.preBidDate ? formatDate(project.preBidDate) : "TBD"}</p>
                     {project.preBidTime && (
                       <p className="text-sm text-gray-500">{project.preBidTime}</p>
                     )}
@@ -434,16 +553,19 @@ export default function BidNoticeDetailPage() {
                       <MapPin className="w-5 h-5 text-orange-600" />
                       <span className="font-medium text-orange-600">Site Inspection</span>
                     </div>
-                    <p className="text-gray-700">{project.siteInspectionDate || "TBD"}</p>
+                    <p className="text-gray-700">{project.siteInspectionDate ? formatDate(project.siteInspectionDate) : "TBD"}</p>
+                    {project.siteInspectionTime && (
+                      <p className="text-sm text-gray-500">{project.siteInspectionTime}</p>
+                    )}
                   </div>
 
                   <div className="bg-green-50 p-4 rounded-lg border border-green-100">
                     <div className="flex items-center gap-2 mb-2">
-                      <AlertCircle className="w-5 h-5 text-green-600" />
-                      <span className="font-medium text-green-600">Bid Submission</span>
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <span className="font-medium text-green-600">Bid Submission Deadline</span>
                     </div>
-                    <p className="text-gray-700">{project.closingDate}</p>
-                    <p className="text-sm text-gray-500">{project.closingTime}</p>
+                    <p className="text-gray-700">{project.deadline ? formatDate(project.deadline) : "N/A"}</p>
+                    <p className="text-sm text-gray-500">{project.closingTime || "12:00 AM"}</p>
                   </div>
                 </div>
               </CardContent>

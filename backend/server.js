@@ -241,6 +241,64 @@ app.put('/api/users/:id/verify', authenticateToken, requireAdmin, async (req, re
   }
 });
 
+// ========== MERCHANT/CONTRACTOR APPROVAL ROUTES ==========
+app.get('/api/merchants', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const [users] = await pool.execute(
+      'SELECT id, email, companyName, businessType, dtiRegistration, tinNumber, businessAddress, phoneNumber, verificationStatus, role, createdAt FROM users WHERE role = ?',
+      ['User']
+    );
+    
+    // Map verificationStatus to status for frontend compatibility
+    const merchants = users.map(user => ({
+      ...user,
+      status: user.verificationStatus === 'Verified' ? 'Approved' : user.verificationStatus
+    }));
+    
+    res.json(merchants);
+  } catch (error) {
+    console.error('Error fetching merchants:', error);
+    res.status(500).json({ error: 'Failed to fetch merchants' });
+  }
+});
+
+app.put('/api/merchants/:id/verify', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body; // 'Pending', 'Approved', 'Rejected'
+    
+    // Map frontend status to database status
+    const dbStatus = status === 'Approved' ? 'Verified' : status;
+    
+    await pool.execute('UPDATE users SET verificationStatus = ? WHERE id = ?', [dbStatus, id]);
+    
+    // If approving, also mark all their documents as verified
+    if (status === 'Approved') {
+      await pool.execute('UPDATE documents SET status = ? WHERE userId = ?', ['Verified', id]);
+    }
+    
+    const [users] = await pool.execute(
+      'SELECT id, email, companyName, businessType, dtiRegistration, tinNumber, businessAddress, phoneNumber, verificationStatus, role, createdAt FROM users WHERE id = ?',
+      [id]
+    );
+    
+    if (users.length === 0) {
+      return res.status(404).json({ error: 'Merchant not found' });
+    }
+    
+    // Return with frontend-compatible status
+    const merchant = {
+      ...users[0],
+      status: users[0].verificationStatus === 'Verified' ? 'Approved' : users[0].verificationStatus
+    };
+    
+    res.json({ message: 'Merchant verification updated', merchant });
+  } catch (error) {
+    console.error('Merchant verify error:', error);
+    res.status(500).json({ error: 'Failed to update merchant status' });
+  }
+});
+
 app.post('/api/users/me/documents', authenticateToken, upload.single('file'), async (req, res) => {
   try {
     const { name, description } = req.body;
@@ -333,30 +391,30 @@ app.get('/api/projects/:id', authenticateToken, async (req, res) => {
 app.post('/api/projects', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { 
-      title, description, abc, location, deadline, status, category,
+      title, description, abc, location, deadline, status, category, businessCategory,
       referenceNumber, solicitationNumber, procuringEntity, clientAgency, areaOfDelivery,
       tradeAgreement, procurementMode, classification, deliveryPeriod,
       closingTime, preBidDate, preBidTime, siteInspectionDate, siteInspectionTime,
       contactName, contactPosition, contactAddress, contactPhone, contactEmail,
-      requirements
+      datePublished, requirements
     } = req.body;
     
     const [result] = await pool.execute(
       `INSERT INTO projects (
-        title, description, abc, location, deadline, status, category,
+        title, description, abc, location, deadline, status, category, businessCategory,
         referenceNumber, solicitationNumber, procuringEntity, clientAgency, areaOfDelivery,
         tradeAgreement, procurementMode, classification, deliveryPeriod,
         closingTime, preBidDate, preBidTime, siteInspectionDate, siteInspectionTime,
         contactName, contactPosition, contactAddress, contactPhone, contactEmail,
-        createdBy
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        datePublished, createdBy
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        title, description, abc, location, deadline, status || 'Open', category || null,
+        title, description, abc, location, deadline, status || 'Open', category || null, businessCategory || null,
         referenceNumber || null, solicitationNumber || null, procuringEntity || null, clientAgency || null, areaOfDelivery || null,
         tradeAgreement || null, procurementMode || null, classification || null, deliveryPeriod || null,
         closingTime || null, preBidDate || null, preBidTime || null, siteInspectionDate || null, siteInspectionTime || null,
         contactName || null, contactPosition || null, contactAddress || null, contactPhone || null, contactEmail || null,
-        req.user.email
+        datePublished || null, req.user.email
       ]
     );
     
@@ -399,27 +457,30 @@ app.put('/api/projects/:id', authenticateToken, requireAdmin, async (req, res) =
   try {
     const { id } = req.params;
     const { 
-      title, description, abc, location, deadline, status, category,
+      title, description, abc, location, deadline, status, category, businessCategory,
       referenceNumber, solicitationNumber, procuringEntity, clientAgency, areaOfDelivery,
       tradeAgreement, procurementMode, classification, deliveryPeriod,
       closingTime, preBidDate, preBidTime, siteInspectionDate, siteInspectionTime,
-      contactName, contactPosition, contactAddress, contactPhone, contactEmail
+      contactName, contactPosition, contactAddress, contactPhone, contactEmail,
+      datePublished
     } = req.body;
     
     await pool.execute(
       `UPDATE projects SET 
-        title = ?, description = ?, abc = ?, location = ?, deadline = ?, status = ?, category = ?,
+        title = ?, description = ?, abc = ?, location = ?, deadline = ?, status = ?, category = ?, businessCategory = ?,
         referenceNumber = ?, solicitationNumber = ?, procuringEntity = ?, clientAgency = ?, areaOfDelivery = ?,
         tradeAgreement = ?, procurementMode = ?, classification = ?, deliveryPeriod = ?,
         closingTime = ?, preBidDate = ?, preBidTime = ?, siteInspectionDate = ?, siteInspectionTime = ?,
-        contactName = ?, contactPosition = ?, contactAddress = ?, contactPhone = ?, contactEmail = ?
+        contactName = ?, contactPosition = ?, contactAddress = ?, contactPhone = ?, contactEmail = ?,
+        datePublished = ?
       WHERE id = ?`,
       [
-        title, description, abc, location, deadline, status, category,
+        title, description, abc, location, deadline, status, category, businessCategory,
         referenceNumber, solicitationNumber, procuringEntity, clientAgency, areaOfDelivery,
         tradeAgreement, procurementMode, classification, deliveryPeriod,
         closingTime, preBidDate, preBidTime, siteInspectionDate, siteInspectionTime,
         contactName, contactPosition, contactAddress, contactPhone, contactEmail,
+        datePublished,
         id
       ]
     );
@@ -429,6 +490,44 @@ app.put('/api/projects/:id', authenticateToken, requireAdmin, async (req, res) =
   } catch (error) {
     console.error('Update project error:', error);
     res.status(500).json({ error: 'Failed to update project' });
+  }
+});
+
+// PATCH endpoint for status-only updates (publish/unpublish)
+app.patch('/api/projects/:id/status', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    if (!status || !['Open', 'Draft', 'Closed'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status. Must be Open, Draft, or Closed' });
+    }
+    
+    await pool.execute('UPDATE projects SET status = ? WHERE id = ?', [status, id]);
+    
+    // If publishing, notify all users
+    if (status === 'Open') {
+      const [projects] = await pool.execute('SELECT title, abc FROM projects WHERE id = ?', [id]);
+      if (projects.length > 0) {
+        const project = projects[0];
+        const [users] = await pool.execute('SELECT id FROM users WHERE role = ?', ['User']);
+        for (const user of users) {
+          await createNotification(
+            user.id,
+            'project',
+            'New Project Available',
+            `A new project "${project.title}" has been posted. ABC: ₱${parseFloat(project.abc).toLocaleString()}.`,
+            `/constra/opportunities/${id}`
+          );
+        }
+      }
+    }
+    
+    const [project] = await pool.execute('SELECT * FROM projects WHERE id = ?', [id]);
+    res.json({ message: 'Status updated', project: project[0] });
+  } catch (error) {
+    console.error('Status update error:', error);
+    res.status(500).json({ error: 'Failed to update status' });
   }
 });
 

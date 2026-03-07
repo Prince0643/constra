@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS `projects` (
   `siteInspectionTime` VARCHAR(20),
   `status` ENUM('Open', 'Closed', 'Draft') DEFAULT 'Open',
   `category` VARCHAR(100),
+  `businessCategory` VARCHAR(100),
   `createdBy` VARCHAR(255),
   `contactName` VARCHAR(255),
   `contactPosition` VARCHAR(255),
@@ -63,6 +64,7 @@ CREATE TABLE IF NOT EXISTS `projects` (
   `contactPhone` VARCHAR(50),
   `contactEmail` VARCHAR(255),
   `createdAt` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `datePublished` DATE,
   `updatedAt` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

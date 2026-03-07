@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -27,14 +27,18 @@ interface Merchant {
   id: string
   companyName: string
   tin: string
+  tinNumber: string
   registrationDate: string
+  createdAt: string
   status: "Pending" | "Approved" | "Rejected"
   businessType: string
   dtiRegistration: string
   address: string
+  businessAddress: string
   contactPerson: string
   email: string
   phone: string
+  phoneNumber: string
   documents: {
     dti: string
     mayorsPermit: string
@@ -42,74 +46,121 @@ interface Merchant {
   }
 }
 
-const merchants: Merchant[] = [
-  {
-    id: "1",
-    companyName: "JAJR CONSTRUCTION",
-    tin: "123-456-789-000",
-    registrationDate: "2026-03-01",
-    status: "Pending",
-    businessType: "Construction Materials and Supplies",
-    dtiRegistration: "DTI-2024-001234",
-    address: "123 Construction Ave., Quezon City, Metro Manila",
-    contactPerson: "Marc Justin Arzadon",
-    email: "marc@jajr-construction.com",
-    phone: "+63 917 123 4567",
-    documents: {
-      dti: "dti_certificate.pdf",
-      mayorsPermit: "mayors_permit_2026.pdf",
-      bir: "bir_registration.pdf"
-    }
-  },
-  {
-    id: "2",
-    companyName: "ABC Builders Corp",
-    tin: "987-654-321-000",
-    registrationDate: "2026-02-28",
-    status: "Pending",
-    businessType: "General Construction",
-    dtiRegistration: "DTI-2024-005678",
-    address: "456 Main Street, Makati City",
-    contactPerson: "Juan Dela Cruz",
-    email: "info@abcbuilders.com",
-    phone: "+63 918 765 4321",
-    documents: {
-      dti: "dti_abc.pdf",
-      mayorsPermit: "permit_makati.pdf",
-      bir: "bir_abc.pdf"
-    }
-  },
-  {
-    id: "3",
-    companyName: "Mega Construction Inc",
-    tin: "456-789-123-000",
-    registrationDate: "2026-02-25",
-    status: "Approved",
-    businessType: "Infrastructure Development",
-    dtiRegistration: "DTI-2024-009012",
-    address: "789 Business Park, Taguig City",
-    contactPerson: "Maria Santos",
-    email: "contact@megaconstruction.com",
-    phone: "+63 919 234 5678",
-    documents: {
-      dti: "dti_mega.pdf",
-      mayorsPermit: "permit_taguig.pdf",
-      bir: "bir_mega.pdf"
-    }
-  },
-]
+const API_URL = '/api'
 
 export default function MerchantsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedMerchant, setSelectedMerchant] = useState<Merchant | null>(null)
   const [isAuditOpen, setIsAuditOpen] = useState(false)
+  const [merchantList, setMerchantList] = useState<Merchant[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const filteredMerchants = merchants.filter((m) =>
+  // Fetch merchants on mount
+  useEffect(() => {
+    fetchMerchants()
+  }, [])
+
+  const fetchMerchants = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        setError('Please log in')
+        setLoading(false)
+        return
+      }
+
+      const res = await fetch(`${API_URL}/merchants`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+
+      if (!res.ok) throw new Error('Failed to fetch merchants')
+
+      const data = await res.json()
+      // Transform API data to match our interface
+      const transformed: Merchant[] = data.map((m: any) => ({
+        ...m,
+        tin: m.tinNumber,
+        registrationDate: m.createdAt?.split('T')[0],
+        address: m.businessAddress,
+        contactPerson: m.companyName,
+        phone: m.phoneNumber,
+        documents: {
+          dti: 'dti_certificate.pdf',
+          mayorsPermit: 'mayors_permit.pdf',
+          bir: 'bir_registration.pdf'
+        }
+      }))
+      setMerchantList(transformed)
+    } catch (err: any) {
+      setError(err.message || 'Failed to load merchants')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleApprove = async (merchantId: string) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const res = await fetch(`${API_URL}/merchants/${merchantId}/verify`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: 'Approved' })
+      })
+
+      if (!res.ok) throw new Error('Failed to approve merchant')
+
+      // Update local state
+      setMerchantList(prev => prev.map(m => 
+        m.id === merchantId ? { ...m, status: "Approved" as const } : m
+      ))
+      if (selectedMerchant?.id === merchantId) {
+        setSelectedMerchant({ ...selectedMerchant, status: "Approved" })
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to approve merchant')
+    }
+  }
+
+  const handleReject = async (merchantId: string) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const res = await fetch(`${API_URL}/merchants/${merchantId}/verify`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: 'Rejected' })
+      })
+
+      if (!res.ok) throw new Error('Failed to reject merchant')
+
+      // Update local state
+      setMerchantList(prev => prev.map(m => 
+        m.id === merchantId ? { ...m, status: "Rejected" as const } : m
+      ))
+      if (selectedMerchant?.id === merchantId) {
+        setSelectedMerchant({ ...selectedMerchant, status: "Rejected" })
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to reject merchant')
+    }
+  }
+
+  const filteredMerchants = merchantList.filter((m) =>
     m.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     m.tin.includes(searchQuery)
   )
 
-  const pendingCount = merchants.filter((m) => m.status === "Pending").length
+  const pendingCount = merchantList.filter((m) => m.status === "Pending").length
 
   return (
     <div className="space-y-6">
@@ -129,7 +180,7 @@ export default function MerchantsPage() {
         <Card>
           <CardContent className="p-4">
             <p className="text-sm text-gray-600">Total Applications</p>
-            <p className="text-2xl font-bold text-[#002D5D]">{merchants.length}</p>
+            <p className="text-2xl font-bold text-[#002D5D]">{merchantList.length}</p>
           </CardContent>
         </Card>
         <Card>
@@ -142,7 +193,7 @@ export default function MerchantsPage() {
           <CardContent className="p-4">
             <p className="text-sm text-gray-600">Approved</p>
             <p className="text-2xl font-bold text-green-600">
-              {merchants.filter((m) => m.status === "Approved").length}
+              {merchantList.filter((m: Merchant) => m.status === "Approved").length}
             </p>
           </CardContent>
         </Card>
@@ -150,7 +201,7 @@ export default function MerchantsPage() {
           <CardContent className="p-4">
             <p className="text-sm text-gray-600">Rejected</p>
             <p className="text-2xl font-bold text-red-600">
-              {merchants.filter((m) => m.status === "Rejected").length}
+              {merchantList.filter((m: Merchant) => m.status === "Rejected").length}
             </p>
           </CardContent>
         </Card>
@@ -228,6 +279,7 @@ export default function MerchantsPage() {
                               variant="outline"
                               size="sm"
                               className="gap-1 text-green-600 hover:bg-green-50"
+                              onClick={() => handleApprove(merchant.id)}
                             >
                               <CheckCircle className="w-4 h-4" />
                               Approve
@@ -236,6 +288,7 @@ export default function MerchantsPage() {
                               variant="outline"
                               size="sm"
                               className="gap-1 text-red-600 hover:bg-red-50"
+                              onClick={() => handleReject(merchant.id)}
                             >
                               <XCircle className="w-4 h-4" />
                               Reject
@@ -367,11 +420,24 @@ export default function MerchantsPage() {
               {/* Actions */}
               {selectedMerchant.status === "Pending" && (
                 <div className="flex gap-3 pt-4 border-t">
-                  <Button className="flex-1 gap-2 bg-green-600 hover:bg-green-700">
+                  <Button 
+                    className="flex-1 gap-2 bg-green-600 hover:bg-green-700"
+                    onClick={() => {
+                      handleApprove(selectedMerchant.id)
+                      setIsAuditOpen(false)
+                    }}
+                  >
                     <CheckCircle className="w-4 h-4" />
                     Approve Registration
                   </Button>
-                  <Button variant="outline" className="flex-1 gap-2 text-red-600 hover:bg-red-50">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1 gap-2 text-red-600 hover:bg-red-50"
+                    onClick={() => {
+                      handleReject(selectedMerchant.id)
+                      setIsAuditOpen(false)
+                    }}
+                  >
                     <XCircle className="w-4 h-4" />
                     Reject
                   </Button>

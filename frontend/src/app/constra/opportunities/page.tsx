@@ -135,6 +135,7 @@ export default function OpportunitiesPage() {
   const filteredProjects = projects.filter((project) => {
     const matchesSearch = 
       project.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      project.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       project.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       project.location?.toLowerCase().includes(searchQuery.toLowerCase())
     
@@ -223,6 +224,7 @@ export default function OpportunitiesPage() {
                 <tr className="bg-gray-50 border-b">
                   <th className="text-left p-4 text-sm font-medium text-gray-600">ITB No.</th>
                   <th className="text-left p-4 text-sm font-medium text-gray-600">Project Title</th>
+                  <th className="text-left p-4 text-sm font-medium text-gray-600">Description</th>
                   <th className="text-left p-4 text-sm font-medium text-gray-600">Category</th>
                   <th className="text-right p-4 text-sm font-medium text-gray-600">ABC</th>
                   <th className="text-center p-4 text-sm font-medium text-gray-600">Closing Date</th>
@@ -233,7 +235,7 @@ export default function OpportunitiesPage() {
               <tbody className="divide-y">
                 {paginatedProjects.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="p-8 text-center text-gray-500">
+                    <td colSpan={8} className="p-8 text-center text-gray-500">
                       No active bid notices found
                     </td>
                   </tr>
@@ -252,6 +254,11 @@ export default function OpportunitiesPage() {
                           <div className="flex items-center gap-1 text-sm text-gray-500 mt-1">
                             <MapPin className="w-3 h-3" />
                             {project.location}
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <div className="text-sm text-gray-600 max-w-xs truncate" title={project.description}>
+                            {project.description || "No description available"}
                           </div>
                         </td>
                         <td className="p-4">
