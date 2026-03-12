@@ -69,7 +69,7 @@ export default function DirectoryPage() {
       try {
         setLoading(true)
         const token = localStorage.getItem('token')
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/merchants`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/merchants`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
