@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -50,26 +50,12 @@ interface Organization {
   projectsWon: number
 }
 
-const sectors: Sector[] = [
-  { id: "1", name: "Construction", organizations: 567, active: 523, blacklisted: 12, pending: 32 },
-  { id: "2", name: "Infrastructure", organizations: 234, active: 218, blacklisted: 5, pending: 11 },
-  { id: "3", name: "Consulting Services", organizations: 189, active: 176, blacklisted: 3, pending: 10 },
-  { id: "4", name: "IT & Technology", organizations: 156, active: 145, blacklisted: 2, pending: 9 },
-  { id: "5", name: "Health & Medical", organizations: 134, active: 128, blacklisted: 1, pending: 5 },
-  { id: "6", name: "Education", organizations: 123, active: 115, blacklisted: 3, pending: 5 },
-  { id: "7", name: "Agriculture", organizations: 89, active: 82, blacklisted: 4, pending: 3 },
-  { id: "8", name: "Transportation", organizations: 78, active: 73, blacklisted: 2, pending: 3 },
-]
-
-const organizations: Organization[] = [
-  { id: "1", name: "JAJR CONSTRUCTION", sector: "Construction", tin: "123-456-789-000", location: "Quezon City", status: "Pending", registrationDate: "2026-03-01", projectsWon: 0 },
-  { id: "2", name: "ABC Builders Corp", sector: "Construction", tin: "987-654-321-000", location: "Makati City", status: "Active", registrationDate: "2025-01-15", projectsWon: 12 },
-  { id: "3", name: "Mega Construction Inc", sector: "Infrastructure", tin: "456-789-123-000", location: "Taguig City", status: "Active", registrationDate: "2024-06-20", projectsWon: 28 },
-  { id: "4", name: "BuildRight Co.", sector: "Construction", tin: "789-123-456-000", location: "Pasig City", status: "Blacklisted", registrationDate: "2023-09-10", projectsWon: 3 },
-  { id: "5", name: "Highway Builders Inc", sector: "Infrastructure", tin: "321-654-987-000", location: "Mandaluyong", status: "Active", registrationDate: "2025-03-15", projectsWon: 15 },
-]
+const sectors: Sector[] = []
 
 export default function DirectoryPage() {
+  const [organizations, setOrganizations] = useState<Organization[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [sectorFilter, setSectorFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
@@ -77,6 +63,47 @@ export default function DirectoryPage() {
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const itemsPerPage = 10
+
+  useEffect(() => {
+    const fetchOrganizations = async () => {
+      try {
+        setLoading(true)
+        const token = localStorage.getItem('token')
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/merchants`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch organizations')
+        }
+        
+        const data = await response.json()
+        
+        // Transform API data to match Organization interface
+        const transformedOrgs: Organization[] = data.map((merchant: any) => ({
+          id: merchant.id.toString(),
+          name: merchant.companyName || 'Unknown Company',
+          sector: merchant.businessType || 'Uncategorized',
+          tin: merchant.tinNumber || 'N/A',
+          location: merchant.businessAddress || 'N/A',
+          status: merchant.status === 'Approved' ? 'Active' : 
+                  merchant.status === 'Rejected' ? 'Blacklisted' : 'Pending',
+          registrationDate: merchant.createdAt ? merchant.createdAt.split('T')[0] : 'N/A',
+          projectsWon: 0 // Would need separate API call to calculate
+        }))
+        
+        setOrganizations(transformedOrgs)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load organizations')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchOrganizations()
+  }, [])
 
   const filteredOrgs = organizations.filter((org) => {
     const matchesSearch = org.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -92,7 +119,12 @@ export default function DirectoryPage() {
     currentPage * itemsPerPage
   )
 
-  const totalOrgs = sectors.reduce((sum, s) => sum + s.organizations, 0)
+  // Calculate statistics from real data
+  const totalOrgs = organizations.length
+  const activeOrgs = organizations.filter(o => o.status === 'Active').length
+  const blacklistedOrgs = organizations.filter(o => o.status === 'Blacklisted').length
+  const pendingOrgs = organizations.filter(o => o.status === 'Pending').length
+  const uniqueSectors = new Set(organizations.map(o => o.sector)).size
 
   return (
     <div className="space-y-6">
@@ -109,13 +141,13 @@ export default function DirectoryPage() {
 
       {/* Sector Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-green-50 border-green-200">
+          <Card className="bg-green-50 border-green-200">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-green-700">Active Organizations</p>
                 <p className="text-2xl font-bold text-green-800">
-                  {sectors.reduce((sum, s) => sum + s.active, 0).toLocaleString()}
+                  {activeOrgs.toLocaleString()}
                 </p>
               </div>
               <CheckCircle className="w-8 h-8 text-green-600" />
@@ -128,7 +160,7 @@ export default function DirectoryPage() {
               <div>
                 <p className="text-sm text-red-700">Blacklisted</p>
                 <p className="text-2xl font-bold text-red-800">
-                  {sectors.reduce((sum, s) => sum + s.blacklisted, 0).toLocaleString()}
+                  {blacklistedOrgs.toLocaleString()}
                 </p>
               </div>
               <XCircle className="w-8 h-8 text-red-600" />
@@ -141,7 +173,7 @@ export default function DirectoryPage() {
               <div>
                 <p className="text-sm text-orange-700">Pending Approval</p>
                 <p className="text-2xl font-bold text-orange-800">
-                  {sectors.reduce((sum, s) => sum + s.pending, 0).toLocaleString()}
+                  {pendingOrgs.toLocaleString()}
                 </p>
               </div>
               <Users className="w-8 h-8 text-orange-600" />
@@ -153,7 +185,7 @@ export default function DirectoryPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-blue-700">Total Sectors</p>
-                <p className="text-2xl font-bold text-blue-800">{sectors.length}</p>
+                <p className="text-2xl font-bold text-blue-800">{uniqueSectors}</p>
               </div>
               <BarChart3 className="w-8 h-8 text-blue-600" />
             </div>
@@ -161,57 +193,6 @@ export default function DirectoryPage() {
         </Card>
       </div>
 
-      {/* Sectors Table */}
-      <Card>
-        <CardHeader className="border-b bg-gray-50/50">
-          <CardTitle className="text-lg text-[#002D5D] flex items-center gap-2">
-            <Building2 className="w-5 h-5" />
-            Sector Summary
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gray-50 border-b">
-                  <th className="text-left p-4 text-sm font-medium text-gray-600">Sector Name</th>
-                  <th className="text-center p-4 text-sm font-medium text-gray-600">Total</th>
-                  <th className="text-center p-4 text-sm font-medium text-gray-600">Active</th>
-                  <th className="text-center p-4 text-sm font-medium text-gray-600">Blacklisted</th>
-                  <th className="text-center p-4 text-sm font-medium text-gray-600">Pending</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {sectors.map((sector) => (
-                  <tr key={sector.id} className="hover:bg-gray-50">
-                    <td className="p-4 font-medium text-[#002D5D]">{sector.name}</td>
-                    <td className="p-4 text-center">
-                      <Badge className="bg-[#002D5D] text-white">
-                        {sector.organizations}
-                      </Badge>
-                    </td>
-                    <td className="p-4 text-center">
-                      <Badge className="bg-green-100 text-green-700">
-                        {sector.active}
-                      </Badge>
-                    </td>
-                    <td className="p-4 text-center">
-                      <Badge className="bg-red-100 text-red-700">
-                        {sector.blacklisted}
-                      </Badge>
-                    </td>
-                    <td className="p-4 text-center">
-                      <Badge className="bg-orange-100 text-orange-700">
-                        {sector.pending}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Organizations List */}
       <Card>
@@ -245,8 +226,8 @@ export default function DirectoryPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Sectors</SelectItem>
-                {sectors.map((s) => (
-                  <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                {Array.from(new Set(organizations.map(o => o.sector))).map((sector) => (
+                  <SelectItem key={sector} value={sector}>{sector}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -278,7 +259,29 @@ export default function DirectoryPage() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {paginatedOrgs.map((org) => (
+                {loading ? (
+                  <tr>
+                    <td colSpan={7} className="p-8 text-center text-gray-500">
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#002D5D]" />
+                        Loading organizations...
+                      </div>
+                    </td>
+                  </tr>
+                ) : error ? (
+                  <tr>
+                    <td colSpan={7} className="p-8 text-center text-red-500">
+                      Error: {error}
+                    </td>
+                  </tr>
+                ) : paginatedOrgs.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="p-8 text-center text-gray-500">
+                      No organizations found
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedOrgs.map((org) => (
                   <tr key={org.id} className="hover:bg-gray-50">
                     <td className="p-4">
                       <div className="font-medium text-[#002D5D]">{org.name}</div>
@@ -321,7 +324,8 @@ export default function DirectoryPage() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  ))
+                )}
               </tbody>
             </table>
           </div>
