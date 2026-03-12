@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Mar 05, 2026 at 02:58 AM
+-- Generation Time: Mar 12, 2026 at 06:57 AM
 -- Server version: 8.4.7
 -- PHP Version: 8.3.28
 
@@ -85,15 +85,6 @@ CREATE TABLE IF NOT EXISTS `award_notices` (
   KEY `idx_project` (`projectId`)
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `award_notices`
---
-
-INSERT INTO `award_notices` (`id`, `awardNoticeNumber`, `awardDate`, `referenceNumber`, `classification`, `title`, `description`, `procuringEntity`, `contractAmount`, `supplierName`, `supplierId`, `projectId`, `bidId`, `status`, `createdAt`, `updatedAt`) VALUES
-(1, '0501264', '2026-12-30', '2024-001', 'Goods', 'Various Office Supplies', NULL, 'DepEd', 1500000.00, 'MARCUSTREND', NULL, NULL, NULL, 'Published', '2026-03-05 10:24:49', '2026-03-05 10:24:49'),
-(2, '0501263', '2026-12-28', '2024-002', 'Civil Works', 'School Building Construction', NULL, 'DPWH', 25000000.00, 'JAJR CONSTRUCTION', NULL, NULL, NULL, 'Published', '2026-03-05 10:24:49', '2026-03-05 10:24:49'),
-(3, '0501254', '2026-12-28', '2023-089', 'Services', 'IT Equipment Supply', NULL, 'DICT', 3500000.00, 'VSTECH', NULL, NULL, NULL, 'Published', '2026-03-05 10:24:49', '2026-03-05 10:24:49');
-
 -- --------------------------------------------------------
 
 --
@@ -114,15 +105,6 @@ CREATE TABLE IF NOT EXISTS `bids` (
   KEY `idx_bids_user` (`userId`),
   KEY `idx_bids_project` (`projectId`)
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `bids`
---
-
-INSERT INTO `bids` (`id`, `bidAmount`, `notes`, `complianceStatus`, `bidStatus`, `submittedAt`, `userId`, `projectId`) VALUES
-(1, 1234.00, 'afasdf', 'Compliant', 'Won', '2026-02-28 14:13:18', 2, 2),
-(2, 4567745.00, 'ftyujfghj', 'Pending', 'Lost', '2026-02-28 14:51:32', 2, 3),
-(3, 1234452.00, '', 'Pending', 'Lost', '2026-02-28 16:43:59', 2, 1);
 
 -- --------------------------------------------------------
 
@@ -175,16 +157,6 @@ CREATE TABLE IF NOT EXISTS `documents` (
   KEY `idx_documents_user` (`userId`)
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `documents`
---
-
-INSERT INTO `documents` (`id`, `name`, `description`, `fileName`, `filePath`, `fileSize`, `status`, `userId`, `createdAt`) VALUES
-(1, 'DTI Registration', 'Department of Trade and Industry registration certificate', 'Document1.pdf', 'uploads/1772261697453-Document1.pdf', '0.08 MB', 'Verified', 2, '2026-02-28 14:54:57'),
-(2, 'Business Permit', 'Valid business permit from local government', 'entrada sto-Model.pdf', 'uploads/1772261700836-entrada sto-Model.pdf', '0.09 MB', 'Verified', 2, '2026-02-28 14:55:00'),
-(3, 'Mayor\'s Permit', 'Mayor\'s permit to operate', 'Document1.pdf', 'uploads/1772261704253-Document1.pdf', '0.08 MB', 'Verified', 2, '2026-02-28 14:55:04'),
-(4, 'Company Profile', 'Company background and portfolio', 'NOV PIE CHART.pdf', 'uploads/1772268256692-NOV PIE CHART.pdf', '0.77 MB', 'Pending', 2, '2026-02-28 16:44:16');
-
 -- --------------------------------------------------------
 
 --
@@ -205,7 +177,14 @@ CREATE TABLE IF NOT EXISTS `notifications` (
   KEY `userId` (`userId`),
   KEY `idx_is_read` (`isRead`),
   KEY `idx_created_at` (`createdAt`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `notifications`
+--
+
+INSERT INTO `notifications` (`id`, `userId`, `type`, `title`, `message`, `link`, `isRead`, `createdAt`) VALUES
+(1, 2, 'project', 'New Project Available', 'A new project \"Test\" has been posted. ABC: ₱456.', '/constra/opportunities/5', 0, '2026-03-06 05:52:33');
 
 -- --------------------------------------------------------
 
@@ -257,15 +236,6 @@ CREATE TABLE IF NOT EXISTS `organizations` (
   KEY `idx_region` (`region`)
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `organizations`
---
-
-INSERT INTO `organizations` (`id`, `name`, `acronym`, `type`, `sectorId`, `address`, `city`, `province`, `region`, `contactPerson`, `contactPosition`, `contactPhone`, `contactEmail`, `website`, `isActive`, `createdAt`, `updatedAt`) VALUES
-(1, 'Department of Public Works', 'DPWH', 'Government', 14, 'Port Area', 'Manila', 'Metro Manila', 'NCR', NULL, NULL, NULL, NULL, NULL, 1, '2026-03-05 10:24:49', '2026-03-05 10:24:49'),
-(2, 'Department of Education', 'DepEd', 'Government', 5, 'Meralco Ave', 'Pasig', 'Metro Manila', 'NCR', NULL, NULL, NULL, NULL, NULL, 1, '2026-03-05 10:24:49', '2026-03-05 10:24:49'),
-(3, 'Department of Health', 'DOH', 'Government', 8, 'San Lazaro', 'Manila', 'Metro Manila', 'NCR', NULL, NULL, NULL, NULL, NULL, 1, '2026-03-05 10:24:49', '2026-03-05 10:24:49');
-
 -- --------------------------------------------------------
 
 --
@@ -304,19 +274,11 @@ CREATE TABLE IF NOT EXISTS `projects` (
   `deliveryPeriod` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
   `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `businessCategory` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `datePublished` date DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_projects_status` (`status`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `projects`
---
-
-INSERT INTO `projects` (`id`, `title`, `description`, `abc`, `location`, `deadline`, `closingTime`, `preBidDate`, `preBidTime`, `siteInspectionDate`, `siteInspectionTime`, `contactName`, `contactPosition`, `contactAddress`, `contactPhone`, `contactEmail`, `createdBy`, `status`, `category`, `referenceNumber`, `solicitationNumber`, `procuringEntity`, `clientAgency`, `areaOfDelivery`, `tradeAgreement`, `procurementMode`, `classification`, `deliveryPeriod`, `createdAt`, `updatedAt`) VALUES
-(1, 'Highway Expansion Project', 'Expansion of the North Luzon Expressway to accommodate increased traffic volume.', 50000000.00, 'Metro Manila', '2024-12-31 23:59:59', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'Open', 'Infrastructure', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-02-28 13:15:38', '2026-02-28 13:15:38'),
-(2, 'School Building Construction', 'Construction of a 3-story school building with 24 classrooms.', 25000000.00, 'Cebu City', '2024-11-30 23:59:59', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'Closed', 'Education', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-02-28 13:15:38', '2026-02-28 14:14:08'),
-(3, 'Road Paving - District 5', 'Asphalt paving of 5km municipal roads including drainage improvements.', 15000000.00, 'Quezon City', '2024-10-31 23:59:59', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'Open', 'Infrastructure', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-02-28 13:15:38', '2026-02-28 13:15:38'),
-(4, '', '', 0.00, '', '0000-00-00 00:00:00', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'Open', '', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-03 10:34:12', '2026-03-03 10:34:12');
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -339,19 +301,6 @@ CREATE TABLE IF NOT EXISTS `project_documents` (
   KEY `projectId` (`projectId`)
 ) ENGINE=MyISAM AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `project_documents`
---
-
-INSERT INTO `project_documents` (`id`, `name`, `fileName`, `filePath`, `fileSize`, `mimeType`, `projectId`, `uploadedBy`, `uploadedAt`) VALUES
-(1, 'JAJR Attendance System_ Production Update Manual.pdf', 'JAJR Attendance System_ Production Update Manual.pdf', 'uploads/1772507024109-JAJR Attendance System_ Production Update Manual.pdf', '0.08 MB', 'application/pdf', 2, 'admin@constra.com', '2026-03-03 03:03:44'),
-(2, 'JAJR Attendance System_ Production Update Manual.pdf', 'JAJR Attendance System_ Production Update Manual.pdf', 'uploads/1772507035268-JAJR Attendance System_ Production Update Manual.pdf', '0.08 MB', 'application/pdf', 1, 'admin@constra.com', '2026-03-03 03:03:55'),
-(3, 'JAJR Attendance System_ Production Update Manual.pdf', 'JAJR Attendance System_ Production Update Manual.pdf', 'uploads/1772507123796-JAJR Attendance System_ Production Update Manual.pdf', '0.08 MB', 'application/pdf', 1, 'admin@constra.com', '2026-03-03 03:05:23'),
-(4, 'Bidding Documents - Construction of Connector Road from C.M. Recto Avenue to Airport Road New Terminal Building in Clark_sgd.pdf', 'Bidding Documents - Construction of Connector Road from C.M. Recto Avenue to Airport Road New Terminal Building in Clark_sgd.pdf', 'uploads/1772507180275-Bidding Documents - Construction of Connector Road from C.M. Recto Avenue to Airport Road New Terminal Building in Clark_sgd.pdf', '1.58 MB', 'application/pdf', 1, 'admin@constra.com', '2026-03-03 03:06:20'),
-(5, 'SFP.pdf', 'SFP.pdf', 'uploads/1772507271116-SFP.pdf', '0.16 MB', 'application/pdf', 1, 'admin@constra.com', '2026-03-03 03:07:51'),
-(6, 'SFP.pdf', 'SFP.pdf', 'uploads/1772507330283-SFP.pdf', '0.16 MB', 'application/pdf', 1, 'admin@constra.com', '2026-03-03 03:08:50'),
-(7, 'EL1.pdf', 'EL1.pdf', 'uploads/1772507448276-EL1.pdf', '0.20 MB', 'application/pdf', 1, 'admin@constra.com', '2026-03-03 03:10:48');
-
 -- --------------------------------------------------------
 
 --
@@ -367,19 +316,7 @@ CREATE TABLE IF NOT EXISTS `project_requirements` (
   `projectId` int NOT NULL,
   PRIMARY KEY (`id`),
   KEY `projectId` (`projectId`)
-) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `project_requirements`
---
-
-INSERT INTO `project_requirements` (`id`, `name`, `description`, `required`, `projectId`) VALUES
-(1, 'Financial Proposal', 'Complete cost breakdown and financial plan', 1, 1),
-(2, 'Technical Specifications', 'Detailed technical approach and methodology', 1, 1),
-(3, 'Company Profile', 'Company background and portfolio', 1, 1),
-(4, 'Financial Proposal', 'Complete cost breakdown and financial plan', 1, 2),
-(5, 'Technical Specifications', 'Detailed technical approach and methodology', 1, 2),
-(6, 'Certificate of PhilGEPS Registration', 'Valid PhilGEPS registration certificate', 1, 2);
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -427,6 +364,40 @@ INSERT INTO `sectors` (`id`, `name`, `description`, `organizationCount`, `displa
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `system_settings`
+--
+
+DROP TABLE IF EXISTS `system_settings`;
+CREATE TABLE IF NOT EXISTS `system_settings` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `settingKey` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `settingValue` text COLLATE utf8mb4_unicode_ci,
+  `settingType` enum('boolean','string','number','json') COLLATE utf8mb4_unicode_ci DEFAULT 'string',
+  `description` text COLLATE utf8mb4_unicode_ci,
+  `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `updatedBy` int DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `settingKey` (`settingKey`),
+  KEY `updatedBy` (`updatedBy`)
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `system_settings`
+--
+
+INSERT INTO `system_settings` (`id`, `settingKey`, `settingValue`, `settingType`, `description`, `updatedAt`, `updatedBy`) VALUES
+(1, 'require2FA', 'true', 'boolean', 'Require 2FA for admin accounts', '2026-03-07 13:48:07', 1),
+(2, 'sessionTimeout', '30', 'number', 'Session timeout in minutes', '2026-03-07 13:48:07', 1),
+(3, 'platformName', 'Constra', 'string', 'Platform name', '2026-03-07 13:48:07', 1),
+(4, 'supportEmail', 'support@constra.com', 'string', 'Support email address', '2026-03-07 13:48:07', 1),
+(5, 'newBidNotifications', 'true', 'boolean', 'Notify admins when new bids are submitted', '2026-03-07 13:48:07', 1),
+(6, 'verificationRequestNotifications', 'true', 'boolean', 'Notify when users submit documents', '2026-03-07 13:48:07', 1),
+(7, 'projectDeadlineNotifications', 'true', 'boolean', 'Send reminders before bid deadlines', '2026-03-07 13:48:07', 1),
+(8, 'documentVerification', 'true', 'boolean', 'Require verification before bidding', '2026-03-07 13:48:07', 1);
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `users`
 --
 
@@ -443,6 +414,9 @@ CREATE TABLE IF NOT EXISTS `users` (
   `phoneNumber` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `verificationStatus` enum('Pending','Verified','Rejected') COLLATE utf8mb4_unicode_ci DEFAULT 'Pending',
   `role` enum('User','Admin') COLLATE utf8mb4_unicode_ci DEFAULT 'User',
+  `twoFASecret` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `twoFAEnabled` tinyint(1) DEFAULT '0',
+  `backupCodes` json DEFAULT NULL,
   `createdAt` datetime DEFAULT CURRENT_TIMESTAMP,
   `updatedAt` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
@@ -455,9 +429,9 @@ CREATE TABLE IF NOT EXISTS `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `email`, `password`, `companyName`, `businessType`, `dtiRegistration`, `tinNumber`, `businessAddress`, `phoneNumber`, `verificationStatus`, `role`, `createdAt`, `updatedAt`) VALUES
-(1, 'admin@constra.com', '$2b$10$2BDmeaa3cSMXDwYGzFfibu3qGZ2OlAtAPZkqHrZIK9ONRICSU64r.', 'Constra Admin', NULL, NULL, NULL, NULL, NULL, 'Verified', 'Admin', '2026-02-28 13:15:38', '2026-02-28 14:12:53'),
-(2, 'user@constra.com', '$2b$10$h5vNpVMxCMZS6fMy563tvuQwX0geQzuqz.fhi.b.m0OD2A3G7Uz6W', 'ABC Construction Corp', 'Construction & Engineering', 'DTI-123456-2024', '123-456-789-000', '123 Main Street, Makati City, Metro Manila, Philippines', '+63 912 345 6789', 'Verified', 'User', '2026-02-28 13:15:38', '2026-02-28 14:12:53');
+INSERT INTO `users` (`id`, `email`, `password`, `companyName`, `businessType`, `dtiRegistration`, `tinNumber`, `businessAddress`, `phoneNumber`, `verificationStatus`, `role`, `twoFASecret`, `twoFAEnabled`, `backupCodes`, `createdAt`, `updatedAt`) VALUES
+(1, 'admin@constra.com', '$2b$10$2BDmeaa3cSMXDwYGzFfibu3qGZ2OlAtAPZkqHrZIK9ONRICSU64r.', 'Constra Admin', NULL, NULL, NULL, NULL, NULL, 'Verified', 'Admin', 'GV4SI4KAOJCHAYZZGVKXWJDCIZ3T43SCKFWEQS3OFJJWOYKWOVZA', 1, '[\"BQIDMZ\", \"N6KMLN\", \"WZM1E0\", \"4A9CQY\", \"BLH763\", \"IAXEJ8\", \"3OIAG5\", \"XSAIDB\"]', '2026-02-28 13:15:38', '2026-03-07 14:11:54'),
+(2, 'user@constra.com', '$2b$10$h5vNpVMxCMZS6fMy563tvuQwX0geQzuqz.fhi.b.m0OD2A3G7Uz6W', 'ABC Construction Corp', 'Construction & Engineering', 'DTI-123456-2024', '123-456-789-000', '123 Main Street, Makati City, Metro Manila, Philippines', '+63 912 345 6789', 'Verified', 'User', NULL, 0, NULL, '2026-02-28 13:15:38', '2026-02-28 14:12:53');
 
 --
 -- Constraints for dumped tables
@@ -512,6 +486,12 @@ ALTER TABLE `organizations`
 --
 ALTER TABLE `project_requirements`
   ADD CONSTRAINT `project_requirements_ibfk_1` FOREIGN KEY (`projectId`) REFERENCES `projects` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `system_settings`
+--
+ALTER TABLE `system_settings`
+  ADD CONSTRAINT `system_settings_ibfk_1` FOREIGN KEY (`updatedBy`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
