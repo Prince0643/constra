@@ -20,7 +20,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 
-const API_URL = '/api'
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api'
 
 interface Project {
   id: string
@@ -68,7 +68,7 @@ export default function OpportunityDetailPage() {
         return
       }
 
-      const res = await fetch(`${API_URL}/api/projects/${projectId}`, {
+      const res = await fetch(`${API_URL}/projects/${projectId}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
 
