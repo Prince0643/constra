@@ -28,7 +28,7 @@ export default function SupportPage() {
               </div>
               <div>
                 <h3 className="font-medium text-gray-900">What documents are required for verification?</h3>
-                <p className="text-gray-600">Typically DTI Registration, Mayor's Permit, Company Profile, and Financial Documents are required.</p>
+                <p className="text-gray-600">Typically DTI Registration, Mayor&apos;s Permit, Company Profile, and Financial Documents are required.</p>
               </div>
             </div>
           </section>
