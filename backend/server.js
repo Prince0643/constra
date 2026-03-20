@@ -557,6 +557,119 @@ app.put('/api/users/:id/verify', authenticateToken, requireAdmin, async (req, re
   }
 });
 
+// Create new user (Admin only)
+app.post('/api/users', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { email, password, companyName, businessType, phoneNumber, businessAddress, role, verificationStatus } = req.body;
+    
+    // Check if email already exists
+    const [existingUsers] = await pool.execute('SELECT * FROM users WHERE email = ?', [email]);
+    if (existingUsers.length > 0) {
+      return res.status(400).json({ error: 'Email already exists' });
+    }
+    
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    // Insert new user
+    const [result] = await pool.execute(
+      'INSERT INTO users (email, password, companyName, businessType, phoneNumber, businessAddress, role, verificationStatus, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())',
+      [email, hashedPassword, companyName || '', businessType || '', phoneNumber || '', businessAddress || '', role || 'User', verificationStatus || 'Pending']
+    );
+    
+    const [newUser] = await pool.execute('SELECT id, email, companyName, verificationStatus, role, createdAt FROM users WHERE id = ?', [result.insertId]);
+    
+    res.status(201).json({ message: 'User created successfully', user: newUser[0] });
+  } catch (error) {
+    console.error('Create user error:', error);
+    res.status(500).json({ error: 'Failed to create user' });
+  }
+});
+
+// Update user (Admin only)
+app.put('/api/users/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { email, companyName, businessType, phoneNumber, businessAddress, role, verificationStatus, password } = req.body;
+    
+    // Check if user exists
+    const [existingUsers] = await pool.execute('SELECT * FROM users WHERE id = ?', [id]);
+    if (existingUsers.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Build update query dynamically
+    const updates = [];
+    const values = [];
+    
+    if (email !== undefined) {
+      // Check if new email already exists for another user
+      const [emailCheck] = await pool.execute('SELECT * FROM users WHERE email = ? AND id != ?', [email, id]);
+      if (emailCheck.length > 0) {
+        return res.status(400).json({ error: 'Email already exists' });
+      }
+      updates.push('email = ?');
+      values.push(email);
+    }
+    if (companyName !== undefined) { updates.push('companyName = ?'); values.push(companyName); }
+    if (businessType !== undefined) { updates.push('businessType = ?'); values.push(businessType); }
+    if (phoneNumber !== undefined) { updates.push('phoneNumber = ?'); values.push(phoneNumber); }
+    if (businessAddress !== undefined) { updates.push('businessAddress = ?'); values.push(businessAddress); }
+    if (role !== undefined) { updates.push('role = ?'); values.push(role); }
+    if (verificationStatus !== undefined) { updates.push('verificationStatus = ?'); values.push(verificationStatus); }
+    if (password) {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      updates.push('password = ?');
+      values.push(hashedPassword);
+    }
+    
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+    
+    values.push(id);
+    
+    await pool.execute(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, values);
+    
+    const [updatedUser] = await pool.execute('SELECT id, email, companyName, verificationStatus, role, createdAt FROM users WHERE id = ?', [id]);
+    
+    res.json({ message: 'User updated successfully', user: updatedUser[0] });
+  } catch (error) {
+    console.error('Update user error:', error);
+    res.status(500).json({ error: 'Failed to update user' });
+  }
+});
+
+// Delete user (Admin only)
+app.delete('/api/users/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Check if user exists
+    const [existingUsers] = await pool.execute('SELECT * FROM users WHERE id = ?', [id]);
+    if (existingUsers.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Prevent deleting self
+    if (existingUsers[0].id === req.user.userId) {
+      return res.status(400).json({ error: 'Cannot delete your own account' });
+    }
+    
+    // Delete related data first (bids, documents)
+    await pool.execute('DELETE FROM bids WHERE userId = ?', [id]);
+    await pool.execute('DELETE FROM documents WHERE userId = ?', [id]);
+    
+    // Delete user
+    await pool.execute('DELETE FROM users WHERE id = ?', [id]);
+    
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    console.error('Delete user error:', error);
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
 // ========== MERCHANT/CONTRACTOR APPROVAL ROUTES ==========
 app.get('/api/merchants', authenticateToken, requireAdmin, async (req, res) => {
   try {

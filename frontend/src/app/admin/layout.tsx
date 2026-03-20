@@ -16,12 +16,14 @@ import {
   Settings, 
   LogOut, 
   Search,
-  Shield
+  Shield,
+  UserCog
 } from "lucide-react"
 import { NotificationBell } from "@/components/notification-bell"
 
 const navItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/users", label: "Users", icon: UserCog },
   { href: "/admin/merchants", label: "Merchant Approvals", icon: Users },
   { href: "/admin/opportunities", label: "Manage Opportunities", icon: FolderPlus },
   { href: "/admin/bids", label: "Bid Evaluations", icon: Gavel },
