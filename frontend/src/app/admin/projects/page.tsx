@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus, Search, FileText, Eye, Edit, Trash2, Loader2, XCircle, Upload, FolderOpen, Download, Import, FileSpreadsheet } from "lucide-react"
+import { Plus, Search, FileText, Eye, Edit, Trash2, Loader2, XCircle, Upload, FolderOpen, Download, Import, FileSpreadsheet, User } from "lucide-react"
 
 // Field Options
 const procurementModes = [
