@@ -44,18 +44,32 @@ interface Project {
   bids: { id: string; bidAmount: number; companyName: string; bidStatus: string }[]
 }
 
+interface ProjectDocument {
+  id: string
+  name: string
+  fileName: string
+  filePath: string
+  fileSize: string
+  mimeType: string
+  uploadedBy: string
+  createdAt: string
+}
+
 export default function OpportunityDetailPage() {
   const params = useParams()
   const router = useRouter()
   const [project, setProject] = useState<Project | null>(null)
+  const [documents, setDocuments] = useState<ProjectDocument[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [downloading, setDownloading] = useState(false)
 
   const projectId = params?.id as string
 
   useEffect(() => {
     if (projectId) {
       fetchProject()
+      fetchDocuments()
     }
   }, [projectId])
 
@@ -81,6 +95,80 @@ export default function OpportunityDetailPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const fetchDocuments = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const res = await fetch(`${API_URL}/projects/${projectId}/documents`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setDocuments(data)
+      }
+    } catch (err) {
+      console.error('Failed to fetch documents:', err)
+    }
+  }
+
+  const handleDownloadITB = async () => {
+    try {
+      setDownloading(true)
+      const token = localStorage.getItem('token')
+      if (!token) {
+        alert('Please log in')
+        return
+      }
+
+      const res = await fetch(`${API_URL}/projects/${projectId}/documents/download`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+
+      if (!res.ok) {
+        const error = await res.json()
+        alert(error.error || 'Failed to download documents')
+        return
+      }
+
+      // Get filename from header or use default
+      const contentDisposition = res.headers.get('content-disposition')
+      let filename = 'ITB_Documents.zip'
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="(.+)"/)
+        if (match) filename = match[1]
+      }
+
+      // Download the file
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (err) {
+      console.error('Download error:', err)
+      alert('Failed to download documents')
+    } finally {
+      setDownloading(false)
+    }
+  }
+
+  const handleViewToR = () => {
+    if (documents.length === 0) {
+      alert('No documents available')
+      return
+    }
+    // Open the first document (assuming it's the ToR)
+    const torDoc = documents[0]
+    const fileUrl = `${API_URL}/uploads/${torDoc.filePath}`
+    window.open(fileUrl, '_blank')
   }
 
   const formatCurrency = (amount: number) => {
@@ -302,14 +390,27 @@ export default function OpportunityDetailPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <Button variant="outline" className="w-full justify-start gap-2">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start gap-2"
+                  onClick={handleDownloadITB}
+                  disabled={downloading || documents.length === 0}
+                >
                   <Download className="w-4 h-4" />
-                  Download ITB Documents
+                  {downloading ? 'Downloading...' : 'Download ITB Documents'}
                 </Button>
-                <Button variant="outline" className="w-full justify-start gap-2">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start gap-2"
+                  onClick={handleViewToR}
+                  disabled={documents.length === 0}
+                >
                   <FileText className="w-4 h-4" />
                   View Terms of Reference
                 </Button>
+                {documents.length === 0 && (
+                  <p className="text-xs text-gray-500 text-center">No documents uploaded</p>
+                )}
               </div>
             </CardContent>
           </Card>
