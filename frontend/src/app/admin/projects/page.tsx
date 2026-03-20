@@ -269,7 +269,7 @@ export default function ProjectsPage() {
       } else if (errorFields.some(f => ["deadline", "closingTime", "datePublished", "areaOfDelivery", "deliveryPeriod"].includes(f))) {
         setActiveTab("timeline")
       } else if (errorFields.some(f => ["contactName", "contactPosition", "contactAddress", "contactPhone", "contactEmail", "description"].includes(f))) {
-        setActiveTab("personnel")
+        setActiveTab("timeline")
       }
       return
     }
@@ -647,11 +647,10 @@ export default function ProjectsPage() {
 
   const renderProjectForm = (isEdit: boolean) => (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-      <TabsList className="grid grid-cols-4 w-full">
+      <TabsList className="grid grid-cols-3 w-full">
         <TabsTrigger value="identification">Identification</TabsTrigger>
         <TabsTrigger value="financial">Financial</TabsTrigger>
         <TabsTrigger value="timeline">Timeline</TabsTrigger>
-        <TabsTrigger value="personnel">Personnel</TabsTrigger>
       </TabsList>
 
       {/* Project Identification Tab */}
@@ -794,26 +793,6 @@ export default function ProjectsPage() {
                 {formErrors.procurementMode && <p className="text-xs text-red-500">{formErrors.procurementMode}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="classification">Classification <span className="text-red-500">*</span></Label>
-                <Select
-                  value={formData.classification}
-                  onValueChange={(value) => handleChange("classification", value)}
-                >
-                  <SelectTrigger className={formErrors.classification ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Select classification..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {classifications.map((cls) => (
-                      <SelectItem key={cls} value={cls}>{cls}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {formErrors.classification && <p className="text-xs text-red-500">{formErrors.classification}</p>}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
                 <Label htmlFor="category">Category <span className="text-red-500">*</span></Label>
                 <Select
                   value={formData.category}
@@ -829,23 +808,6 @@ export default function ProjectsPage() {
                   </SelectContent>
                 </Select>
                 {formErrors.category && <p className="text-xs text-red-500">{formErrors.category}</p>}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="businessCategory">Business Category</Label>
-                <Select
-                  value={formData.businessCategory}
-                  onValueChange={(value) => handleChange("businessCategory", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select business category..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {businessCategories.map((cat) => (
-                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-gray-500">Specific industry sector</p>
               </div>
             </div>
           </CardContent>
@@ -975,137 +937,6 @@ export default function ProjectsPage() {
             </div>
           </CardContent>
         </Card>
-      </TabsContent>
-
-      {/* Personnel & Documentation Tab */}
-      <TabsContent value="personnel" className="space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg text-[#002D5D] flex items-center gap-2">
-              <FileText className="w-5 h-5" />
-              Personnel & Documentation Fields
-            </CardTitle>
-            <CardDescription>
-              Contact information and project scope details
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="contactName">Contact Person Name <span className="text-red-500">*</span></Label>
-                <Input
-                  id="contactName"
-                  placeholder="e.g., Engr. Maria Santos"
-                  value={formData.contactName}
-                  onChange={(e) => handleChange("contactName", e.target.value)}
-                  className={formErrors.contactName ? "border-red-500" : ""}
-                />
-                {formErrors.contactName && <p className="text-xs text-red-500">{formErrors.contactName}</p>}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="contactPosition">Position/Designation <span className="text-red-500">*</span></Label>
-                <Input
-                  id="contactPosition"
-                  placeholder="e.g., BAC Chairperson / OIC-Engineering"
-                  value={formData.contactPosition}
-                  onChange={(e) => handleChange("contactPosition", e.target.value)}
-                  className={formErrors.contactPosition ? "border-red-500" : ""}
-                />
-                {formErrors.contactPosition && <p className="text-xs text-red-500">{formErrors.contactPosition}</p>}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="contactAddress">Office Address <span className="text-red-500">*</span></Label>
-              <Textarea
-                id="contactAddress"
-                placeholder="Street, City/Municipality, Province, ZIP Code"
-                rows={2}
-                value={formData.contactAddress}
-                onChange={(e) => handleChange("contactAddress", e.target.value)}
-                className={formErrors.contactAddress ? "border-red-500" : ""}
-              />
-              {formErrors.contactAddress && <p className="text-xs text-red-500">{formErrors.contactAddress}</p>}
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="contactPhone">Contact Phone <span className="text-red-500">*</span></Label>
-                <Input
-                  id="contactPhone"
-                  placeholder="e.g., +63 (2) 8123-4567 loc. 234"
-                  value={formData.contactPhone}
-                  onChange={(e) => handleChange("contactPhone", e.target.value)}
-                  className={formErrors.contactPhone ? "border-red-500" : ""}
-                />
-                {formErrors.contactPhone && <p className="text-xs text-red-500">{formErrors.contactPhone}</p>}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="contactEmail">Contact Email <span className="text-red-500">*</span></Label>
-                <Input
-                  id="contactEmail"
-                  type="email"
-                  placeholder="e.g., bac@deped-quezoncity.gov.ph"
-                  value={formData.contactEmail}
-                  onChange={(e) => handleChange("contactEmail", e.target.value)}
-                  className={formErrors.contactEmail ? "border-red-500" : ""}
-                />
-                {formErrors.contactEmail && <p className="text-xs text-red-500">{formErrors.contactEmail}</p>}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description">Description / Abstract</Label>
-              <Textarea
-                id="description"
-                placeholder="Brief paragraph explaining the scope of work or a detailed list of required items..."
-                rows={4}
-                value={formData.description}
-                onChange={(e) => handleChange("description", e.target.value)}
-              />
-              <p className="text-xs text-gray-500">Project scope explanation or required items list</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {!isEdit && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg text-[#002D5D]">Required Documents Checklist</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="border rounded-lg p-4 space-y-3">
-                {requirementTemplates.map((req, index) => (
-                  <div key={index} className="flex items-start gap-3">
-                    <input
-                      type="checkbox"
-                      id={`req-${index}`}
-                      className="mt-1"
-                      checked={formData.requirements.includes(req.name)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setFormData(prev => ({ ...prev, requirements: [...prev.requirements, req.name] }))
-                        } else {
-                          setFormData(prev => ({ ...prev, requirements: prev.requirements.filter(r => r !== req.name) }))
-                        }
-                      }}
-                    />
-                    <div className="flex-1">
-                      <Label htmlFor={`req-${index}`} className="font-medium cursor-pointer">
-                        {req.name}
-                        {req.required && <span className="text-red-500 ml-1">*</span>}
-                      </Label>
-                      <p className="text-sm text-gray-500">{req.description}</p>
-                    </div>
-                    <Badge variant={req.required ? "default" : "outline"}>
-                      {req.required ? "Required" : "Optional"}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </TabsContent>
     </Tabs>
   )
