@@ -8,6 +8,8 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const archiver = require('archiver');
+const speakeasy = require('speakeasy');
+const QRCode = require('qrcode');
 const PORT = process.env.PORT || 4000;
 
 const app = express();
@@ -140,6 +142,60 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ error: 'Invalid credentials' });
     }
 
+    // Check if 2FA is required for admin users
+    let requires2FA = false;
+    let requires2FASetup = false;
+    
+    if (user.role === 'Admin') {
+      const [settings] = await pool.execute(
+        'SELECT settingValue FROM system_settings WHERE settingKey = ?',
+        ['require2FA']
+      );
+      
+      if (settings.length > 0 && settings[0].settingValue === 'true') {
+        if (user.twoFAEnabled) {
+          requires2FA = true;
+        } else {
+          requires2FASetup = true;
+        }
+      }
+    }
+
+    // If 2FA is required, return temp token
+    if (requires2FA) {
+      const tempToken = jwt.sign(
+        { userId: user.id, email: user.email, role: user.role, temp: true },
+        process.env.JWT_SECRET || 'your-secret-key',
+        { expiresIn: '5m' }
+      );
+      
+      return res.json({
+        requires2FA: true,
+        tempToken,
+        userId: user.id,
+        email: user.email,
+        role: user.role
+      });
+    }
+
+    // If admin needs to setup 2FA first
+    if (requires2FASetup) {
+      const tempToken = jwt.sign(
+        { userId: user.id, email: user.email, role: user.role, setup2FA: true },
+        process.env.JWT_SECRET || 'your-secret-key',
+        { expiresIn: '15m' }
+      );
+      
+      return res.json({
+        requires2FASetup: true,
+        tempToken,
+        userId: user.id,
+        email: user.email,
+        role: user.role
+      });
+    }
+
+    // Normal login - no 2FA required
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET || 'your-secret-key',
@@ -153,12 +209,272 @@ app.post('/api/auth/login', async (req, res) => {
         email: user.email,
         companyName: user.companyName,
         role: user.role,
-        verificationStatus: user.verificationStatus
+        verificationStatus: user.verificationStatus,
+        twoFAEnabled: user.twoFAEnabled
       }
     });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// ========== 2FA ROUTES ==========
+
+// Verify 2FA code during login
+app.post('/api/auth/2fa/verify', async (req, res) => {
+  try {
+    const { tempToken, code } = req.body;
+    
+    // Verify temp token
+    let decoded;
+    try {
+      decoded = jwt.verify(tempToken, process.env.JWT_SECRET || 'your-secret-key');
+    } catch (err) {
+      return res.status(401).json({ error: 'Invalid or expired session' });
+    }
+    
+    if (!decoded.temp) {
+      return res.status(401).json({ error: 'Invalid session' });
+    }
+    
+    // Get user's 2FA secret
+    const [users] = await pool.execute(
+      'SELECT * FROM users WHERE id = ?',
+      [decoded.userId]
+    );
+    
+    if (users.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    const user = users[0];
+    
+    if (!user.twoFAEnabled || !user.twoFASecret) {
+      return res.status(400).json({ error: '2FA not enabled for this user' });
+    }
+    
+    // Verify TOTP code
+    const verified = speakeasy.totp.verify({
+      secret: user.twoFASecret,
+      encoding: 'base32',
+      token: code,
+      window: 2 // Allow 2 time steps (±60 seconds)
+    });
+    
+    if (!verified) {
+      // Check if it's a backup code
+      let backupCodes = [];
+      try {
+        backupCodes = JSON.parse(user.backupCodes || '[]');
+      } catch (e) {
+        backupCodes = [];
+      }
+      
+      const backupIndex = backupCodes.indexOf(code);
+      if (backupIndex === -1) {
+        return res.status(400).json({ error: 'Invalid 2FA code' });
+      }
+      
+      // Remove used backup code
+      backupCodes.splice(backupIndex, 1);
+      await pool.execute(
+        'UPDATE users SET backupCodes = ? WHERE id = ?',
+        [JSON.stringify(backupCodes), user.id]
+      );
+    }
+    
+    // Generate full auth token
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, role: user.role },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '24h' }
+    );
+    
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        companyName: user.companyName,
+        role: user.role,
+        verificationStatus: user.verificationStatus,
+        twoFAEnabled: user.twoFAEnabled
+      }
+    });
+  } catch (error) {
+    console.error('2FA verify error:', error);
+    res.status(500).json({ error: 'Failed to verify 2FA code' });
+  }
+});
+
+// Setup 2FA - Generate secret and QR code
+app.post('/api/users/me/2fa/setup', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    
+    // Generate secret
+    const secret = speakeasy.generateSecret({
+      name: `Constra:${req.user.email}`,
+      length: 32
+    });
+    
+    // Generate QR code
+    const otpauthUrl = secret.otpauth_url;
+    const qrCodeDataUrl = await QRCode.toDataURL(otpauthUrl);
+    
+    // Generate backup codes
+    const backupCodes = [];
+    for (let i = 0; i < 8; i++) {
+      backupCodes.push(Math.random().toString(36).substring(2, 8).toUpperCase());
+    }
+    
+    // Store temporarily in a pending field (not enabled yet)
+    await pool.execute(
+      'UPDATE users SET twoFASecret = ?, backupCodes = ? WHERE id = ?',
+      [secret.base32, JSON.stringify(backupCodes), userId]
+    );
+    
+    res.json({
+      secret: secret.base32,
+      qrCodeUrl: qrCodeDataUrl,
+      backupCodes
+    });
+  } catch (error) {
+    console.error('2FA setup error:', error);
+    res.status(500).json({ error: 'Failed to setup 2FA' });
+  }
+});
+
+// Enable 2FA after verification
+app.post('/api/users/me/2fa/enable', authenticateToken, async (req, res) => {
+  try {
+    const { code } = req.body;
+    const userId = req.user.userId;
+    
+    // Get user's secret
+    const [users] = await pool.execute(
+      'SELECT twoFASecret FROM users WHERE id = ?',
+      [userId]
+    );
+    
+    if (users.length === 0 || !users[0].twoFASecret) {
+      return res.status(400).json({ error: '2FA setup not initiated' });
+    }
+    
+    const user = users[0];
+    
+    // Verify the code
+    const verified = speakeasy.totp.verify({
+      secret: user.twoFASecret,
+      encoding: 'base32',
+      token: code,
+      window: 2
+    });
+    
+    if (!verified) {
+      return res.status(400).json({ error: 'Invalid verification code' });
+    }
+    
+    // Enable 2FA
+    await pool.execute(
+      'UPDATE users SET twoFAEnabled = TRUE WHERE id = ?',
+      [userId]
+    );
+    
+    res.json({ success: true, message: '2FA enabled successfully' });
+  } catch (error) {
+    console.error('2FA enable error:', error);
+    res.status(500).json({ error: 'Failed to enable 2FA' });
+  }
+});
+
+// Disable 2FA
+app.post('/api/users/me/2fa/disable', authenticateToken, async (req, res) => {
+  try {
+    const { code } = req.body;
+    const userId = req.user.userId;
+    
+    // Get user
+    const [users] = await pool.execute(
+      'SELECT twoFASecret, twoFAEnabled, backupCodes FROM users WHERE id = ?',
+      [userId]
+    );
+    
+    if (users.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    const user = users[0];
+    
+    if (!user.twoFAEnabled) {
+      return res.status(400).json({ error: '2FA is not enabled' });
+    }
+    
+    // Verify TOTP code
+    let verified = false;
+    if (user.twoFASecret) {
+      verified = speakeasy.totp.verify({
+        secret: user.twoFASecret,
+        encoding: 'base32',
+        token: code,
+        window: 2
+      });
+    }
+    
+    // Check if it's a backup code
+    if (!verified) {
+      let backupCodes = [];
+      try {
+        backupCodes = JSON.parse(user.backupCodes || '[]');
+      } catch (e) {
+        backupCodes = [];
+      }
+      
+      const backupIndex = backupCodes.indexOf(code);
+      if (backupIndex !== -1) {
+        verified = true;
+        backupCodes.splice(backupIndex, 1);
+        await pool.execute(
+          'UPDATE users SET backupCodes = ? WHERE id = ?',
+          [JSON.stringify(backupCodes), userId]
+        );
+      }
+    }
+    
+    if (!verified) {
+      return res.status(400).json({ error: 'Invalid code' });
+    }
+    
+    // Disable 2FA
+    await pool.execute(
+      'UPDATE users SET twoFAEnabled = FALSE, twoFASecret = NULL, backupCodes = NULL WHERE id = ?',
+      [userId]
+    );
+    
+    res.json({ success: true, message: '2FA disabled successfully' });
+  } catch (error) {
+    console.error('2FA disable error:', error);
+    res.status(500).json({ error: 'Failed to disable 2FA' });
+  }
+});
+
+// Get 2FA status
+app.get('/api/users/me/2fa/status', authenticateToken, async (req, res) => {
+  try {
+    const [users] = await pool.execute(
+      'SELECT twoFAEnabled FROM users WHERE id = ?',
+      [req.user.userId]
+    );
+    
+    if (users.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({ enabled: users[0].twoFAEnabled === 1 || users[0].twoFAEnabled === true });
+  } catch (error) {
+    console.error('2FA status error:', error);
+    res.status(500).json({ error: 'Failed to get 2FA status' });
   }
 });
 
@@ -624,7 +940,7 @@ app.get('/api/projects/:id/documents/download', authenticateToken, async (req, r
     fs.appendFileSync('debug.log', `\n--- ZIP Download for project ${id} ---\n`);
     for (const doc of documents) {
       const normalizedFilePath = doc.filePath.replace(/\\/g, '/');
-      const filePath = path.join(__dirname, normalizedFilePath);
+      const filePath = path.join(__dirname, 'uploads', normalizedFilePath);
       const exists = fs.existsSync(filePath);
       fs.appendFileSync('debug.log', `Doc: ${doc.name}\n`);
       fs.appendFileSync('debug.log', `  DB path: ${doc.filePath}\n`);
@@ -988,6 +1304,74 @@ app.post('/api/seed', async (req, res) => {
   } catch (error) {
     console.error('Seed error:', error);
     res.status(500).json({ error: 'Seeding failed' });
+  }
+});
+
+// ========== SYSTEM SETTINGS ROUTES ==========
+
+// Get all settings
+app.get('/api/settings', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const [settings] = await pool.execute('SELECT settingKey, settingValue, settingType, description FROM system_settings');
+    const settingsMap = settings.reduce((acc, row) => {
+      let value = row.settingValue;
+      if (row.settingType === 'boolean') {
+        value = value === 'true';
+      } else if (row.settingType === 'number') {
+        value = parseFloat(value);
+      }
+      acc[row.settingKey] = value;
+      return acc;
+    }, {});
+    res.json(settingsMap);
+  } catch (error) {
+    console.error('Error fetching settings:', error);
+    res.status(500).json({ error: 'Failed to fetch settings' });
+  }
+});
+
+// Get single setting
+app.get('/api/settings/:key', authenticateToken, async (req, res) => {
+  try {
+    const { key } = req.params;
+    const [settings] = await pool.execute(
+      'SELECT settingKey, settingValue, settingType FROM system_settings WHERE settingKey = ?',
+      [key]
+    );
+    if (settings.length === 0) {
+      return res.status(404).json({ error: 'Setting not found' });
+    }
+    const row = settings[0];
+    let value = row.settingValue;
+    if (row.settingType === 'boolean') {
+      value = value === 'true';
+    } else if (row.settingType === 'number') {
+      value = parseFloat(value);
+    }
+    res.json({ [row.settingKey]: value });
+  } catch (error) {
+    console.error('Error fetching setting:', error);
+    res.status(500).json({ error: 'Failed to fetch setting' });
+  }
+});
+
+// Update settings (admin only)
+app.put('/api/settings', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const updates = req.body;
+    const userId = req.user.userId;
+    
+    for (const [key, value] of Object.entries(updates)) {
+      await pool.execute(
+        'UPDATE system_settings SET settingValue = ?, updatedBy = ? WHERE settingKey = ?',
+        [String(value), userId, key]
+      );
+    }
+    
+    res.json({ message: 'Settings updated successfully' });
+  } catch (error) {
+    console.error('Error updating settings:', error);
+    res.status(500).json({ error: 'Failed to update settings' });
   }
 });
 
