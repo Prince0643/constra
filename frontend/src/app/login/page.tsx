@@ -30,6 +30,8 @@ export default function LoginPage() {
 
     try {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api"
+      console.log("API_URL:", API_URL)
+      console.log("Form data:", formData)
       
       const response = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
@@ -37,15 +39,20 @@ export default function LoginPage() {
         body: JSON.stringify(formData)
       })
       
+      console.log("Response status:", response.status)
+      
       const data = await response.json()
+      console.log("Response data:", data)
       
       if (!response.ok) {
+        console.log("Response not OK, setting error:", data.error)
         setError(data.error || "Invalid credentials")
         return
       }
       
       // Check if 2FA is required
       if (data.requires2FA) {
+        console.log("2FA required, setting step to 2fa")
         setTempToken(data.tempToken)
         setStep("2fa")
         return
@@ -53,12 +60,14 @@ export default function LoginPage() {
       
       // Check if 2FA setup is required (admin enforcement)
       if (data.requires2FASetup) {
+        console.log("2FA setup required")
         localStorage.setItem("tempToken", data.tempToken)
         router.push("/setup-2fa")
         return
       }
       
       // Normal login - store token and redirect
+      console.log("Normal login, storing token and redirecting")
       localStorage.setItem("token", data.token)
       localStorage.setItem("user", JSON.stringify(data.user))
       
