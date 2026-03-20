@@ -647,10 +647,11 @@ export default function ProjectsPage() {
 
   const renderProjectForm = (isEdit: boolean) => (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-      <TabsList className="grid grid-cols-3 w-full">
+      <TabsList className="grid grid-cols-4 w-full">
         <TabsTrigger value="identification">Identification</TabsTrigger>
         <TabsTrigger value="financial">Financial</TabsTrigger>
         <TabsTrigger value="timeline">Timeline</TabsTrigger>
+        <TabsTrigger value="personnel">Personnel</TabsTrigger>
       </TabsList>
 
       {/* Project Identification Tab */}
@@ -934,6 +935,97 @@ export default function ProjectsPage() {
                   />
                 </div>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      {/* Personnel Tab */}
+      <TabsContent value="personnel" className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg text-[#002D5D] flex items-center gap-2">
+              <User className="w-5 h-5" />
+              Contact Person Details
+            </CardTitle>
+            <CardDescription>
+              Primary contact information for project inquiries
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="contactName">Contact Name <span className="text-red-500">*</span></Label>
+                <Input
+                  id="contactName"
+                  placeholder="e.g., Engr. Maria Santos"
+                  value={formData.contactName}
+                  onChange={(e) => handleChange("contactName", e.target.value)}
+                  className={formErrors.contactName ? "border-red-500" : ""}
+                />
+                {formErrors.contactName && <p className="text-xs text-red-500">{formErrors.contactName}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="contactPosition">Contact Position <span className="text-red-500">*</span></Label>
+                <Input
+                  id="contactPosition"
+                  placeholder="e.g., BAC Chairperson"
+                  value={formData.contactPosition}
+                  onChange={(e) => handleChange("contactPosition", e.target.value)}
+                  className={formErrors.contactPosition ? "border-red-500" : ""}
+                />
+                {formErrors.contactPosition && <p className="text-xs text-red-500">{formErrors.contactPosition}</p>}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="contactAddress">Contact Address <span className="text-red-500">*</span></Label>
+              <Textarea
+                id="contactAddress"
+                placeholder="Street, City/Municipality, Province, ZIP Code"
+                rows={3}
+                value={formData.contactAddress}
+                onChange={(e) => handleChange("contactAddress", e.target.value)}
+                className={formErrors.contactAddress ? "border-red-500" : ""}
+              />
+              {formErrors.contactAddress && <p className="text-xs text-red-500">{formErrors.contactAddress}</p>}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="contactPhone">Contact Phone <span className="text-red-500">*</span></Label>
+                <Input
+                  id="contactPhone"
+                  placeholder="e.g., +63 (2) 8123-4567"
+                  value={formData.contactPhone}
+                  onChange={(e) => handleChange("contactPhone", e.target.value)}
+                  className={formErrors.contactPhone ? "border-red-500" : ""}
+                />
+                {formErrors.contactPhone && <p className="text-xs text-red-500">{formErrors.contactPhone}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="contactEmail">Contact Email <span className="text-red-500">*</span></Label>
+                <Input
+                  id="contactEmail"
+                  type="email"
+                  placeholder="e.g., bac@deped.gov.ph"
+                  value={formData.contactEmail}
+                  onChange={(e) => handleChange("contactEmail", e.target.value)}
+                  className={formErrors.contactEmail ? "border-red-500" : ""}
+                />
+                {formErrors.contactEmail && <p className="text-xs text-red-500">{formErrors.contactEmail}</p>}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Project Description</Label>
+              <Textarea
+                id="description"
+                placeholder="Brief description of the project scope and requirements..."
+                rows={4}
+                value={formData.description}
+                onChange={(e) => handleChange("description", e.target.value)}
+              />
             </div>
           </CardContent>
         </Card>
