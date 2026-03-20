@@ -1236,7 +1236,7 @@ export default function ProjectsPage() {
             </div>
             <div>
               <p className="text-gray-500 mb-1">Description</p>
-              <p className="text-sm">{selectedProject?.description || "No description provided"}</p>
+              <p className="text-sm whitespace-pre-line break-words leading-relaxed">{selectedProject?.description || "No description provided"}</p>
             </div>
           </div>
           <DialogFooter>
