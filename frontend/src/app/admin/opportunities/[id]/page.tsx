@@ -395,15 +395,6 @@ export default function OpportunityDetailPage() {
                 <Button 
                   variant="outline" 
                   className="w-full justify-start gap-2"
-                  onClick={handleDownloadITB}
-                  disabled={downloading || documents.length === 0}
-                >
-                  <Download className="w-4 h-4" />
-                  {downloading ? 'Downloading...' : 'Download ITB Documents'}
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start gap-2"
                   onClick={handleViewToR}
                   disabled={documents.length === 0}
                 >

@@ -252,12 +252,16 @@ ORGANIZATION PROFILE MODAL:
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Mock Data
+## Data Source
 
-The page includes mock data for demonstration:
-- 8 predefined sectors with realistic counts
-- 5 sample organizations (JAJR CONSTRUCTION, ABC Builders, etc.)
-- Mock contact information and documents
+The page now fetches real organization data from the `/api/merchants` API endpoint. Statistics are calculated dynamically from the fetched data:
+- Total Organizations: Count of all registered merchants
+- Active Organizations: Count of approved merchants
+- Blacklisted: Count of rejected merchants  
+- Pending Approval: Count of pending merchants
+- Total Sectors: Unique business types from all organizations
+
+The Sector Summary table has been removed as it relied on hardcoded sector data.
 
 ## Related Pages
 

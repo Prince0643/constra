@@ -12,7 +12,7 @@ export default function Home() {
             <Building2 className="w-6 h-6 text-white" />
           </div>
           <div className="flex flex-col">
-            <span className="text-white font-bold text-lg leading-tight">CONSTA</span>
+            <span className="text-white font-bold text-lg leading-tight">CONSTRA</span>
           </div>
         </div>
 
