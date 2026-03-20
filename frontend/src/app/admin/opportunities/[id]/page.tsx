@@ -286,7 +286,7 @@ export default function OpportunityDetailPage() {
               <Separator />
               <div>
                 <p className="text-sm text-gray-500 mb-2">Description</p>
-                <p className="text-gray-700">{project.description || 'No description provided.'}</p>
+                <p className="text-gray-700 whitespace-pre-line break-words leading-relaxed">{project.description || 'No description provided.'}</p>
               </div>
             </CardContent>
           </Card>
