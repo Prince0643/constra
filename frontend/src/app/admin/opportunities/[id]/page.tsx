@@ -167,8 +167,8 @@ export default function OpportunityDetailPage() {
     }
     // Open the first document (assuming it's the ToR)
     const torDoc = documents[0]
-    // Remove /api from URL since uploads are served at /uploads, not /api/uploads
-    const baseUrl = API_URL.replace('/api', '')
+    // Use base API URL without /api suffix for static files
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:4000'
     const fileUrl = `${baseUrl}/uploads/${torDoc.filePath}`
     window.open(fileUrl, '_blank')
   }
