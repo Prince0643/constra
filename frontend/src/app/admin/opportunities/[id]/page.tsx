@@ -393,13 +393,12 @@ export default function OpportunityDetailPage() {
             <CardContent>
               <div className="space-y-2">
                 <Button 
-                  variant="outline" 
-                  className="w-full justify-start gap-2"
-                  onClick={handleViewToR}
-                  disabled={documents.length === 0}
+                  className="w-full justify-start gap-2 bg-blue-600 hover:bg-blue-700"
+                  onClick={handleDownloadITB}
+                  disabled={downloading || documents.length === 0}
                 >
-                  <FileText className="w-4 h-4" />
-                  View Terms of Reference
+                  <Download className="w-4 h-4" />
+                  {downloading ? 'Downloading...' : 'Download Terms of Reference'}
                 </Button>
                 {documents.length === 0 && (
                   <p className="text-xs text-gray-500 text-center">No documents uploaded</p>
